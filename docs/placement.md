@@ -214,6 +214,24 @@ any benchmark built from it without their consent.
 
 ## The work
 
-Tracked in the placement issue; each step is its own issue.
+Tracked in [#10](https://github.com/its-saeed/sanjeh/issues/10); each step
+is its own issue. The first three need no data; calibration, mapping and the
+real benchmark need learners, so they wait on the public benchmark and the
+rating tools ([#1](https://github.com/its-saeed/sanjeh/issues/1),
+[#2](https://github.com/its-saeed/sanjeh/issues/2)).
 
-<!-- issue list -->
+| # | Step | Section |
+|---|---|---|
+| [#11](https://github.com/its-saeed/sanjeh/issues/11) | Review the design and settle its open questions | [Open questions](#open-questions) |
+| [#12](https://github.com/its-saeed/sanjeh/issues/12) | The adaptive test engine: estimate, choose the next item, stop | [Estimating](#estimating-the-level), [Choosing](#choosing-the-next-item), [Stopping](#stopping) |
+| [#13](https://github.com/its-saeed/sanjeh/issues/13) | Simulated learners, to test the engine before any data | [Validation](#validation) |
+| [#14](https://github.com/its-saeed/sanjeh/issues/14) | The item bank format | [The item bank](#the-item-bank) |
+| [#15](https://github.com/its-saeed/sanjeh/issues/15) | Vocabulary yes/no items, scored with a correction for guessing | [Vocabulary yes/no](#vocabulary-yesno) |
+| [#16](https://github.com/its-saeed/sanjeh/issues/16) | A made-up word generator | [Vocabulary yes/no](#vocabulary-yesno) |
+| [#17](https://github.com/its-saeed/sanjeh/issues/17) | Listening items from openly licensed audio | [Listening items](#listening-items) |
+| [#18](https://github.com/its-saeed/sanjeh/issues/18) | Speaking items | [Speaking items](#speaking-items) |
+| [#19](https://github.com/its-saeed/sanjeh/issues/19) | Calibrating items from learners' answers | [Calibration](#calibration) |
+| [#20](https://github.com/its-saeed/sanjeh/issues/20) | Mapping ability to CEFR levels | [Mapping to CEFR](#mapping-to-cefr) |
+| [#21](https://github.com/its-saeed/sanjeh/issues/21) | A real benchmark of learners with a known level | [Validation](#validation) |
+| [#22](https://github.com/its-saeed/sanjeh/issues/22) | Keeping the level up to date from practice | [Keeping the level up to date](#keeping-the-level-up-to-date) |
+| [#23](https://github.com/its-saeed/sanjeh/issues/23) | `sanjeh placement simulate` and `try` | [Interface](#interface) |

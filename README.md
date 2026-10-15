@@ -24,7 +24,8 @@ teachers and learners as much as from programmers.
 | `line` | How hard is this line to **hear** (written down from the audio) and to **say** (shadowed with the speaker), and how much is it worth practising? Why? | first model, `v1` |
 | spoken try | How close did a learner's try come to the speaker's rhythm, intonation and sounds? | [#9](https://github.com/its-saeed/sanjeh/issues/9) |
 | two voices | Split a subtitle line said by two people into one line each | [#6](https://github.com/its-saeed/sanjeh/issues/6) |
-| `words`, `placement` | A word's level in its sentence; a learner's level, by a short adaptive test | planned |
+| placement | A learner's level for listening and speaking, by a five-minute adaptive test | [design](docs/placement.md), [#10](https://github.com/its-saeed/sanjeh/issues/10) |
+| `words` | A word's level in its sentence, not only by the word lists | planned |
 
 ## Try it
 
@@ -194,7 +195,7 @@ println!("{:.1} to hear, {:.1} to say", measured.ear.level, measured.mouth.level
   Sanjeh running the speech recognisers itself.
 - **Placement**: a learner's level for listening and for speaking, by a
   five-minute adaptive test, kept up to date by their practice — see
-  [the design](docs/placement.md).
+  [the design](docs/placement.md) and [#10](https://github.com/its-saeed/sanjeh/issues/10).
 - **A word's level in its sentence**, not only by the word lists.
 
 ## How it is built
