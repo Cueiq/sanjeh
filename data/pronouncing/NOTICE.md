@@ -3,8 +3,8 @@
 `pronouncing.tsv.gz` is made by `scripts/pronouncing/build.py` from two
 open pronouncing dictionaries, their sounds rewritten in IPA, and British
 contractions and possessives made from Britfone's words and clitics. Sanjeh
-bundles it, and Bembegoo ships it beside itself. Their notices follow,
-as their licences ask.
+bundles it; whatever ships it ships these notices with it. Their notices
+follow, as their licences ask.
 
 ## Britfone (British)
 

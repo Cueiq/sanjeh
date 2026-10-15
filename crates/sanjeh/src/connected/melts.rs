@@ -1,6 +1,6 @@
-//! The rule engine (docs/product/melt-plan.md, phase 2): where the words of
-//! a line melt into each other, by the twelve rules, from what the
-//! pronouncing table says each word sounds like in the learner's accent.
+//! The rule engine: where the words of a line melt into each other, by the
+//! twelve rules, from what the pronouncing table says each word sounds like
+//! in the learner's accent.
 //!
 //! A line is cut into phrases at its punctuation — a speaker pauses there —
 //! and nothing melts across one. Fixed fusions (*going to* → *gonna*) are
@@ -28,7 +28,7 @@ pub struct Melt {
     pub rule: &'static str,
     /// Which words of the line, by their place in it.
     pub words: Range<usize>,
-    /// Where they are in the line, in UTF-16 units, as the app counts.
+    /// Where they are in the line, in UTF-16 units, as JavaScript counts.
     pub span: Range<usize>,
     /// How they sound, in plain letters: `pi-ki-tup`.
     pub sound: String,

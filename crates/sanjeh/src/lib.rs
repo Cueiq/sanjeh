@@ -40,8 +40,8 @@ const HYPHENS: [char; 2] = ['\u{2010}', '\u{2011}'];
 /// An English word or phrase as a learner knows it, the same wherever it is
 /// written: composed (NFC); its words one space apart, none around them;
 /// lower case; every apostrophe the typewriter one, every hyphen `-`, and
-/// three dots an ellipsis. Bembegoo's `term_key` for English, which its
-/// tests hold to this.
+/// three dots an ellipsis. An app that keys terms the same way can hold its
+/// own key to this one in its tests.
 pub fn term_key(term: &str) -> String {
     let composed: String = term.nfc().collect();
     composed

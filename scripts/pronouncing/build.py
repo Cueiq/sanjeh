@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Sanjeh's pronouncing table from two open pronouncing dictionaries.
 
-    python3 scripts/pronouncing/build.py ~/bembegoo-courses/.pronouncing
+    python3 scripts/pronouncing/build.py <folder>
 
 reads `britfone.main.3.0.1.csv` (British, MIT) and `cmudict.dict` (American,
 BSD) from that folder — each checked against the hash it was built from, so
@@ -284,4 +284,6 @@ def main(folder):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1] if len(sys.argv) > 1 else '~/bembegoo-courses/.pronouncing')
+    if len(sys.argv) != 2:
+        sys.exit('usage: build.py <folder holding britfone.main.3.0.1.csv and cmudict.dict>')
+    main(sys.argv[1])

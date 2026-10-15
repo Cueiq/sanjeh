@@ -2,9 +2,8 @@
 //! dictionaries bundled with Sanjeh (decided 2026-10-05): Britfone for
 //! British English, the CMU Pronouncing Dictionary for American, rewritten
 //! the way learners' dictionaries write them by `scripts/pronouncing/build.py`
-//! (their notices are in `data/NOTICE.md`). The learner picks the accent; a
-//! card shows what the table says before anything a model wrote, which it
-//! keeps for what the table doesn't know.
+//! (their notices are in `data/pronouncing/NOTICE.md`). The accent is the
+//! caller's to choose.
 
 use std::io::Read;
 use std::sync::LazyLock;
@@ -82,8 +81,8 @@ static WORDS: LazyLock<Table> = LazyLock::new(|| {
     Table { text, lines }
 });
 
-/// Reads the table now, rather than on the first card that asks: the app
-/// calls it as it starts, off its main thread.
+/// Reads the table now, rather than on the first word asked about: call it
+/// as a program starts, off its main thread.
 pub fn warm_pronouncing() {
     LazyLock::force(&WORDS);
 }
@@ -102,8 +101,8 @@ pub enum Pronounced {
 }
 
 /// The sound of a word or phrase in an accent, as IPA without slashes, its
-/// words' sounds one space apart. It is read as Bembegoo keys terms
-/// (`term_key`): composed, case, every apostrophe and hyphen alike. The
+/// words' sounds one space apart. It is read by its key (`term_key`):
+/// composed, case, every apostrophe and hyphen alike. The
 /// punctuation around a word doesn't matter; a full stop inside one does
 /// (*U.S.*). A hyphenated word not in the table is its parts, each with its
 /// own stress, as a phrase's words are.
@@ -248,7 +247,7 @@ mod tests {
             pronounce("'Hello'", Accent::Us),
             pronounce("hello", Accent::Us)
         );
-        // Every apostrophe the app reads as one, and composed.
+        // Every apostrophe read as one, and composed.
         assert_eq!(known("don‛t", Accent::Us), known("don't", Accent::Us));
         assert_eq!(known("don`t", Accent::Us), known("don't", Accent::Us));
         assert_eq!(known("don´t", Accent::Us), known("don't", Accent::Us));

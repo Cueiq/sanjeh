@@ -1,8 +1,8 @@
-//! Connected speech: how English words melt into each other when said
-//! (docs/product/melt-plan.md). The twelve rules Melt teaches, with their
-//! names and explanations in English and Persian and their examples, and the
-//! word lists its engine works from — weak forms and fixed fusions — are
-//! data, `data/connected-speech.json` (Bembegoo's apps read a copy of it);
+//! Connected speech: how English words melt into each other when said. The
+//! twelve rules, with their names and explanations in English and Persian
+//! and their examples, and the word lists the engine works from — weak forms
+//! and fixed fusions — are data, `data/connected-speech.json`
+//! (`CONNECTED_SPEECH_JSON`, for an app keeping a copy beside its own code);
 //! the engine, `melts`, finds them in a line.
 
 mod melted;

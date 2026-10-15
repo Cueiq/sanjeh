@@ -1,6 +1,6 @@
-//! A line as it is said (docs/product/melt-plan.md, the first version):
-//! its melts drawn together into the stretches the learner reads —
-//! *thi-sis thuh story-yuv two girls who sha-ruh fla-tin London*. Melts
+//! A line as it is said: its melts drawn together into the stretches the
+//! learner reads — *thi-sis thuh story-yuv two girls who sha-ruh fla-tin
+//! London*. Melts
 //! over the same word are one stretch: a weak *of* inside the link of
 //! *story of*, the dropped d of *and shine* after the link of *rise and*.
 
@@ -12,7 +12,7 @@ use super::melts::line_words;
 /// One stretch of a line where words melt, as it sounds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
-    /// Where they are in the line, in UTF-16 units, as the app counts.
+    /// Where they are in the line, in UTF-16 units, as JavaScript counts.
     pub span: Range<usize>,
     /// How they sound, in plain letters: `sha-ruh`.
     pub said: String,
@@ -46,8 +46,8 @@ pub fn melted(line: &str, melts: &[Melt]) -> Vec<Piece> {
 
 /// Melts over the same words, as one stretch: the joints chained in their
 /// order, and a word's own melt (a weak form, -in') at the stretch's end
-/// written into it. One the letters can't show stays among its melts, for
-/// the card, without being written.
+/// written into it. One the letters can't show stays among its melts,
+/// without being written.
 fn piece(line: &str, words: &[String], melts: &[Melt], group: Vec<usize>) -> Piece {
     let from = melts[group[0]].span.start;
     let to = group
