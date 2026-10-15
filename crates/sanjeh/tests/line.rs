@@ -55,3 +55,9 @@ fn a_model_weighs_the_features_it_names() {
     assert_eq!(m.mouth.level, 3.0);
     assert_eq!(m.ear.worth, 0.5);
 }
+
+#[test]
+fn the_default_model_measures_a_line() {
+    let m = measure(&line("There are no bad situations as long as I'm with you.", 4700), sanjeh::line::default_model());
+    assert!((1.0..7.0).contains(&m.ear.level) && (0.0..=1.0).contains(&m.mouth.worth));
+}

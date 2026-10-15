@@ -159,6 +159,15 @@ pub struct LineMeasure {
     pub mouth: SkillMeasure,
 }
 
+/// The model lines are measured by when none is chosen: the newest in
+/// `models/line/` that has beaten the one before it on the benchmarks.
+pub fn default_model() -> &'static LineModel {
+    static MODEL: std::sync::LazyLock<LineModel> = std::sync::LazyLock::new(|| {
+        LineModel::from_json(include_str!("../../../../models/line/v1.json")).expect("models/line/v1.json is a line model")
+    });
+    &MODEL
+}
+
 /// Measures a line with a model.
 pub fn measure(input: &LineInput, model: &LineModel) -> LineMeasure {
     let facts = facts(input);
