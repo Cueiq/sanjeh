@@ -58,6 +58,6 @@ every level, are the next step: every level from A1 to C2 needs raters at it.
 | Model | Ear: votes · level AUC · worth AUC | Mouth: votes · level AUC · worth AUC |
 |---|---|---|
 | `v0-hand` | 29% · 0.51 · 0.66 | 32% · 0.58 · 0.08 |
-| `v1` | 39% · 0.61 · 0.55 | 46% · 0.52 · 0.67 |
+| `v1` | 39% · 0.61 · 0.55 | 39% · 0.52 · 0.65 |
 
 One rater and 28 rated lines a skill: differences under about 0.1 are noise.

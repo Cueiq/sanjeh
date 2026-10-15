@@ -131,6 +131,22 @@ pub fn pronounce(text: &str, accent: Accent) -> Pronounced {
     Pronounced::Known(sounds.join(" "))
 }
 
+/// Every reading the table gives one word in an accent, the dictionary's
+/// first first — even a word whose readings say different things (*with*:
+/// θ or ð), for what holds whichever is said: its syllables, its hard
+/// sounds. None for a word it doesn't have.
+pub fn readings(word: &str, accent: Accent) -> Vec<String> {
+    let key = term_key(word);
+    let Some(entry) = WORDS.find(key.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'')) else {
+        return vec![];
+    };
+    let side = match accent {
+        Accent::Us => entry.us,
+        Accent::Gb => entry.gb,
+    };
+    side.split('|').filter(|sound| !sound.is_empty()).map(str::to_owned).collect()
+}
+
 enum Found {
     Sound(String),
     Ambiguous,

@@ -61,3 +61,11 @@ fn the_default_model_measures_a_line() {
     let m = measure(&line("There are no bad situations as long as I'm with you.", 4700), sanjeh::line::default_model());
     assert!((1.0..7.0).contains(&m.ear.level) && (0.0..=1.0).contains(&m.mouth.worth));
 }
+
+#[test]
+fn a_word_read_two_ways_still_has_its_hard_sounds() {
+    assert!(!sanjeh::readings("with", sanjeh::Accent::Us).is_empty());
+    let f = facts(&line("There are no bad situations as long as I'm with you.", 4700));
+    assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "th" && word == "with"));
+    assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use crate::connected::{connected_speech, line_words, melts};
 use crate::levels::{Level, word_level};
-use crate::{Pronounced, pronounce};
+use crate::{Pronounced, pronounce, readings};
 
 use super::heard::{Hearing, WordKind, hearing};
 use super::{Entry, LineInput, Reason, Skill, WhyNot};
@@ -94,10 +94,13 @@ fn known(word: &str, accent: crate::Accent) -> bool {
     !matches!(pronounce(word, accent), Pronounced::Unknown)
 }
 
+/// A word's sound: the table's, or its first reading where its readings
+/// differ (*with*), as both have the same syllables and hard sounds.
 fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
     match pronounce(word, accent) {
-        Pronounced::Known(sound) => Some(sound.split('|').next().unwrap_or_default().to_string()),
-        _ => None,
+        Pronounced::Known(sound) => Some(sound),
+        Pronounced::Ambiguous => readings(word, accent).into_iter().next(),
+        Pronounced::Unknown => None,
     }
 }
 
