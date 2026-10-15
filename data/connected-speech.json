@@ -1,0 +1,246 @@
+{
+  "format": 1,
+  "rules": [
+    {
+      "id": "linking",
+      "accent": "both",
+      "order": 1,
+      "forBeginners": true,
+      "name": { "en": "Linking", "fa": "پیوند واژه‌ها" },
+      "explanation": {
+        "en": "A word that ends in a consonant joins the next one when it starts with a vowel: the consonant moves over, and the two sound like one word. Between two vowels, a light w or y slips in.",
+        "fa": "وقتی واژه‌ای با صامت تمام می‌شود و واژهٔ بعدی با مصوت شروع می‌شود، آن صامت به واژهٔ بعدی می‌چسبد و دو واژه مثل یک واژه شنیده می‌شوند. میان دو مصوت هم صدای کوتاهی مثل w یا y می‌آید."
+      },
+      "examples": [
+        { "text": "Come on. Rise and shine.", "melt": "Come on", "sound": "ka-mon", "ipa": { "us": "kʌ‿ˈmɑːn", "gb": "kʌ‿ˈmɒn" }, "from": "extra-s01e02 #16" },
+        { "text": "Thank you. Oh, yeah, look at that.", "melt": "look at that", "sound": "loo-kat that", "ipa": { "us": "lʊ‿kæt ðæt", "gb": "lʊ‿kæt ðæt" }, "from": "stuart-s01e01 #125" },
+        { "text": "I am Nick. I live next door.", "melt": "I am", "sound": "I-yam", "ipa": { "us": "aɪ‿jæm", "gb": "aɪ‿jæm" }, "from": "extra-s01e01 #150" },
+        { "text": "Go away!", "melt": "Go away", "sound": "go-wa-way", "ipa": { "us": "goʊ‿wəˈweɪ", "gb": "gəʊ‿wəˈweɪ" } }
+      ]
+    },
+    {
+      "id": "weak-form",
+      "accent": "both",
+      "order": 2,
+      "forBeginners": true,
+      "name": { "en": "Weak forms", "fa": "شکل کوتاه واژه‌های کوچک" },
+      "explanation": {
+        "en": "Small words such as to, for, of, and and can are said quickly and lightly when they aren't stressed: to sounds like tuh, for like fer, and like 'n'.",
+        "fa": "واژه‌های کوچکی مثل to، for، of، and و can وقتی تأکید ندارند، سریع و کم‌رنگ گفته می‌شوند: to مثل tuh، for مثل fer و and مثل 'n' شنیده می‌شود."
+      },
+      "examples": [
+        { "text": "'Do you have a bed for me?'", "melt": "for me", "sound": "fer me", "ipa": { "us": "fɚ ˈmiː", "gb": "fə ˈmiː" }, "from": "extra-s01e01 #49" },
+        { "text": "Fish and chips.", "melt": "Fish and chips", "sound": "fish 'n' chips", "ipa": { "us": "ˈfɪʃ n̩ ˈtʃɪps", "gb": "ˈfɪʃ n̩ ˈtʃɪps" }, "from": "extra-s01e01 #190" },
+        { "text": "Can I help you?", "melt": "Can I", "sound": "k'n I", "ipa": { "us": "kən‿aɪ", "gb": "kən‿aɪ" }, "from": "extra-s01e02 #98" },
+        { "text": "I will go to the shoe shop.", "melt": "go to the", "sound": "go tuh the", "ipa": { "us": "goʊ tə ðə", "gb": "gəʊ tə ðə" }, "from": "extra-s01e02 #121" }
+      ]
+    },
+    {
+      "id": "fusion",
+      "accent": "both",
+      "order": 3,
+      "forBeginners": true,
+      "name": { "en": "Fusions", "fa": "سرهم‌گویی" },
+      "explanation": {
+        "en": "Some common pairs are said as one short word: going to → gonna, want to → wanna, don't know → dunno. Films are full of them; formal writing keeps the words apart.",
+        "fa": "بعضی جفت‌واژه‌های پرکاربرد مثل یک واژهٔ کوتاه گفته می‌شوند: going to می‌شود gonna، want to می‌شود wanna و don't know می‌شود dunno. فیلم‌ها پر از آن‌هاست، اما در نوشتهٔ رسمی واژه‌ها جدا نوشته می‌شوند."
+      },
+      "examples": [
+        { "text": "Oh, my goodness. What are we going to do?", "melt": "going to", "sound": "gonna", "ipa": { "us": "ˈgʌnə", "gb": "ˈgənə" }, "from": "extra-s01e01 #135" },
+        { "text": "I want to give you some money.", "melt": "want to", "sound": "wanna", "ipa": { "us": "ˈwɑːnə", "gb": "ˈwɒnə" }, "from": "extra-s01e04 #66" },
+        { "text": "I don't know.", "melt": "don't know", "sound": "dunno", "ipa": { "us": "dəˈnoʊ", "gb": "dəˈnəʊ" }, "from": "extra-s01e02 #268" },
+        { "text": "Oh, erm, let me see. It says...November 5th.", "melt": "let me", "sound": "lemme", "ipa": { "us": "ˈlemi", "gb": "ˈlemi" }, "from": "extra-s01e01 #56" }
+      ]
+    },
+    {
+      "id": "elision",
+      "accent": "both",
+      "order": 4,
+      "forBeginners": false,
+      "name": { "en": "Dropped sounds", "fa": "صدای افتاده" },
+      "explanation": {
+        "en": "A t or d caught between two consonants is often not said at all: next door → nex door, just buy → jus buy.",
+        "fa": "t یا d که میان دو صامت گیر افتاده باشد، اغلب اصلاً گفته نمی‌شود: next door می‌شود nex door و just buy می‌شود jus buy."
+      },
+      "examples": [
+        { "text": "I am Nick. I live next door.", "melt": "next door", "sound": "nex door", "ipa": { "us": "neks ˈdɔːr", "gb": "neks ˈdɔː" }, "from": "extra-s01e01 #150" },
+        { "text": "Next time in Extra...", "melt": "Next time", "sound": "nex time", "ipa": { "us": "neks ˈtaɪm", "gb": "neks ˈtaɪm" }, "from": "extra-s01e01 #268" },
+        { "text": "OK. I'll just buy the shirt.", "melt": "just buy", "sound": "jus buy", "ipa": { "us": "dʒʌs ˈbaɪ", "gb": "dʒəs ˈbaɪ" }, "from": "extra-s01e02 #124" }
+      ]
+    },
+    {
+      "id": "yod",
+      "accent": "both",
+      "order": 5,
+      "forBeginners": false,
+      "name": { "en": "Melting into you", "fa": "درآمیختن با you" },
+      "explanation": {
+        "en": "A t, d, s or z before you or your melts with its y: would you → wudja, what you → whatcha, miss you → mishoo.",
+        "fa": "t، d، s یا z پیش از you یا your با صدای y آن درمی‌آمیزد: would you می‌شود wudja، what you می‌شود whatcha و miss you می‌شود mishoo."
+      },
+      "examples": [
+        { "text": "Would you like a drink, Nick?", "melt": "Would you", "sound": "wudja", "ipa": { "us": "ˈwʊdʒə", "gb": "ˈwʊdʒə" }, "from": "extra-s01e01 #67" },
+        { "text": "Annie, look, it's not what you write,", "melt": "what you", "sound": "whatcha", "ipa": { "us": "ˈwʌtʃə", "gb": "ˈwɒtʃə" }, "from": "extra-s01e03 #87" },
+        { "text": "Did you hear something?", "melt": "Did you", "sound": "didja", "ipa": { "us": "ˈdɪdʒə", "gb": "ˈdɪdʒə" }, "from": "stuart-s01e04 #267" },
+        { "text": "I miss you. The children miss you.", "melt": "miss you", "sound": "mishoo", "ipa": { "us": "ˈmɪʃuː", "gb": "ˈmɪʃuː" }, "from": "stuart-s01e04 #82" }
+      ]
+    },
+    {
+      "id": "h-dropping",
+      "accent": "both",
+      "order": 6,
+      "forBeginners": false,
+      "name": { "en": "A silent h", "fa": "h بی‌صدا" },
+      "explanation": {
+        "en": "Inside a sentence, he, him, her, his and have lose their h, and the word joins the one before: tell her → tell-er, did he → di-dee.",
+        "fa": "در میانهٔ جمله، he، him، her، his و have صدای h خود را از دست می‌دهند و به واژهٔ پیش از خود می‌چسبند: tell her می‌شود tell-er و did he می‌شود di-dee."
+      },
+      "examples": [
+        { "text": "But how did he guess?", "melt": "did he", "sound": "di-dee", "ipa": { "us": "ˈdɪ‿di", "gb": "ˈdɪ‿di" }, "from": "extra-s01e04 #191" },
+        { "text": "That would have been my guess.", "melt": "would have", "sound": "woo-duv", "ipa": { "us": "ˈwʊ‿dəv", "gb": "ˈwʊ‿dəv" }, "from": "stuart-s01e01 #219" },
+        { "text": "Give him a minute.", "melt": "Give him", "sound": "giv-im", "ipa": { "us": "ˈgɪ‿vɪm", "gb": "ˈgɪ‿vɪm" } }
+      ]
+    },
+    {
+      "id": "g-dropping",
+      "accent": "both",
+      "order": 6,
+      "forBeginners": false,
+      "name": { "en": "-in' for -ing", "fa": "‎-in' به‌جای ‎-ing" },
+      "explanation": {
+        "en": "An -ing at the end of a word is often said -in', in quick and friendly speech: going → goin', something → somethin'.",
+        "fa": "‎-ing در پایان واژه، در گفتار سریع و خودمانی، اغلب ‎-in' گفته می‌شود: going می‌شود goin' و something می‌شود somethin'."
+      },
+      "examples": [
+        { "text": "I thought so! What on earth are you doing? Are you crazy?", "melt": "doing", "sound": "doin'", "ipa": { "us": "ˈduːɪn", "gb": "ˈduːɪn" }, "from": "extra-s01e04 #20" },
+        { "text": "Oh, well, keep going, Hector.", "melt": "going", "sound": "goin'", "ipa": { "us": "ˈgoʊɪn", "gb": "ˈgəʊɪn" }, "from": "extra-s01e03 #26" },
+        { "text": "I've got something for you.", "melt": "something", "sound": "somethin'", "ipa": { "us": "ˈsʌmθɪn", "gb": "ˈsʌmθɪn" }, "from": "extra-s01e02 #192" }
+      ]
+    },
+    {
+      "id": "them",
+      "accent": "both",
+      "order": 6,
+      "forBeginners": false,
+      "name": { "en": "them → 'em", "fa": "them کوتاه" },
+      "explanation": {
+        "en": "them shrinks to 'em and joins the word before it: tell them → tell-em, kill them → kill-em.",
+        "fa": "them به ‎'em کوتاه می‌شود و به واژهٔ پیش از خود می‌چسبد: tell them می‌شود tell-em و kill them می‌شود kill-em."
+      },
+      "examples": [
+        { "text": "Tell them about the alternate version of you.", "melt": "Tell them", "sound": "tell-em", "ipa": { "us": "ˈte‿ləm", "gb": "ˈte‿ləm" }, "from": "stuart-s01e01 #186" },
+        { "text": "-Kill them! -Wait! Whoa, whoa, whoa, whoa!", "melt": "Kill them", "sound": "kill-em", "ipa": { "us": "ˈkɪ‿ləm", "gb": "ˈkɪ‿ləm" }, "from": "stuart-s01e02 #282" }
+      ]
+    },
+    {
+      "id": "flap-t",
+      "accent": "us",
+      "order": 7,
+      "forBeginners": false,
+      "name": { "en": "The soft American t", "fa": "t نرم آمریکایی" },
+      "explanation": {
+        "en": "In American English, a t between two vowel sounds is a quick, soft d: water → wadder, a lot of → a lodda, got it → go-dit.",
+        "fa": "در انگلیسی آمریکایی، t میان دو مصوت مثل d نرم و سریعی گفته می‌شود: water می‌شود wadder، a lot of می‌شود a lodda و got it می‌شود go-dit."
+      },
+      "examples": [
+        { "text": "Please, I don't have a lot of time.", "melt": "a lot of", "sound": "a lodda", "ipa": { "us": "ə ˈlɑːɾə" }, "from": "stuart-s01e01 #51" },
+        { "text": "-How is it out there? -It's a little nippy. Wear layers.", "melt": "a little", "sound": "a liddle", "ipa": { "us": "ə ˈlɪɾəl" }, "from": "stuart-s01e01 #93" },
+        { "text": "I think I got it!", "melt": "got it", "sound": "go-dit", "ipa": { "us": "ˈgɑː‿ɾɪt" }, "from": "stuart-s01e01 #346" },
+        { "text": "Potassium. And some water.", "melt": "water", "sound": "wadder", "ipa": { "us": "ˈwɑːɾɚ" }, "from": "stuart-s01e01 #292" }
+      ]
+    },
+    {
+      "id": "glottal-t",
+      "accent": "gb",
+      "order": 7,
+      "forBeginners": false,
+      "name": { "en": "The cut-off British t", "fa": "t بریدهٔ بریتانیایی" },
+      "explanation": {
+        "en": "In British English, a t before a consonant or a pause is often cut off with a short catch in the throat instead: not for you → no' for you, what's that → wha's tha'.",
+        "fa": "در انگلیسی بریتانیایی، t پیش از صامت یا پیش از مکث اغلب گفته نمی‌شود و به‌جایش گلو برای لحظه‌ای بسته می‌شود: not for you می‌شود no' for you و what's that می‌شود wha's tha'."
+      },
+      "examples": [
+        { "text": "No, no, no, Hector, that's not for you.", "melt": "not for", "sound": "no' for", "ipa": { "gb": "nɒʔ fə" }, "from": "extra-s01e02 #77" },
+        { "text": "What's that smell?", "melt": "What's that", "sound": "wha's tha'", "ipa": { "gb": "wɒʔs ðæʔ" }, "from": "extra-s01e03 #170" },
+        { "text": "It's not a problem!", "melt": "not a", "sound": "no' a", "ipa": { "gb": "nɒʔ ə" }, "from": "extra-s01e03 #239" }
+      ]
+    },
+    {
+      "id": "assimilation",
+      "accent": "both",
+      "order": 8,
+      "forBeginners": false,
+      "name": { "en": "Sounds that change", "fa": "صداهایی که عوض می‌شوند" },
+      "explanation": {
+        "en": "A sound changes to suit the next one: n before p, b or m becomes m (ten melons → tem melons), n before k or g becomes ng (in case → ing case), and d before b becomes b (good boy → goob boy).",
+        "fa": "صدایی خود را به صدای بعدی نزدیک می‌کند: n پیش از p، b یا m به m تبدیل می‌شود (ten melons می‌شود tem melons)، n پیش از k یا g به ng (in case می‌شود ing case) و d پیش از b به b (good boy می‌شود goob boy)."
+      },
+      "examples": [
+        { "text": "Oh, good boy!", "melt": "good boy", "sound": "goob boy", "ipa": { "us": "ˈgʊb ˈbɔɪ", "gb": "ˈgʊb ˈbɔɪ" }, "from": "extra-s01e01 #24" },
+        { "text": "Hector ordered ten melons instead of ten lemons.", "melt": "ten melons", "sound": "tem melons", "ipa": { "us": "tem ˈmelənz", "gb": "tem ˈmelənz" }, "from": "extra-s01e02 #218" },
+        { "text": "We're gonna need some backup in case your bwood doesn't do the twick.", "melt": "in case", "sound": "ing case", "ipa": { "us": "ɪŋ ˈkeɪs", "gb": "ɪŋ ˈkeɪs" }, "from": "stuart-s01e03 #177" },
+        { "text": "it can be avoided, it never has to happen.", "melt": "can be", "sound": "cam be", "ipa": { "us": "kəm bi", "gb": "kəm bi" }, "from": "stuart-s01e01 #44" }
+      ]
+    },
+    {
+      "id": "linking-r",
+      "accent": "gb",
+      "order": 9,
+      "forBeginners": false,
+      "name": { "en": "The r that comes back", "fa": "r که برمی‌گردد" },
+      "explanation": {
+        "en": "In British English an r at the end of a word is silent, but it comes back when the next word starts with a vowel: where is → wair-riz, for a moment → fo-ra moment. Between two vowels, an r can even be added: law and order → law-rand order.",
+        "fa": "در انگلیسی بریتانیایی، r پایان واژه گفته نمی‌شود، اما وقتی واژهٔ بعدی با مصوت شروع شود برمی‌گردد: where is می‌شود wair-riz و for a moment می‌شود fo-ra moment. میان دو مصوت حتی ممکن است r اضافه شود: law and order می‌شود law-rand order."
+      },
+      "examples": [
+        { "text": "Where is Charley? Charley!", "melt": "Where is", "sound": "wair-riz", "ipa": { "gb": "weə‿rɪz" }, "from": "extra-s01e01 #206" },
+        { "text": "Hector, please excuse me for a moment.", "melt": "for a moment", "sound": "fo-ra moment", "ipa": { "gb": "fə‿rə ˈməʊmənt" }, "from": "extra-s01e02 #35" },
+        { "text": "Law and order.", "melt": "Law and order", "sound": "law-rand order", "ipa": { "gb": "ˈlɔː‿rənd ˈɔːdə" } }
+      ]
+    }
+  ],
+  "weakForms": [
+    { "word": "a", "sound": "uh", "ipa": { "us": "ə", "gb": "ə" } },
+    { "word": "the", "sound": "thuh", "ipa": { "us": "ðə", "gb": "ðə" } },
+    { "word": "to", "sound": "tuh", "ipa": { "us": "tə", "gb": "tə" } },
+    { "word": "for", "sound": "fer", "ipa": { "us": "fɚ", "gb": "fə" } },
+    { "word": "of", "sound": "uv", "ipa": { "us": "əv", "gb": "əv" } },
+    { "word": "and", "sound": "'n'", "ipa": { "us": "ən", "gb": "ən" } },
+    { "word": "can", "sound": "k'n", "ipa": { "us": "kən", "gb": "kən" } },
+    { "word": "at", "sound": "ut", "ipa": { "us": "ət", "gb": "ət" } },
+    { "word": "from", "sound": "frum", "ipa": { "us": "frəm", "gb": "frəm" } },
+    { "word": "some", "sound": "sum", "ipa": { "us": "səm", "gb": "səm" } },
+    { "word": "was", "sound": "wuz", "ipa": { "us": "wəz", "gb": "wəz" } },
+    { "word": "are", "sound": "er", "ipa": { "us": "ɚ", "gb": "ə" } },
+    { "word": "but", "sound": "b't", "ipa": { "us": "bət", "gb": "bət" } },
+    { "word": "as", "sound": "uz", "ipa": { "us": "əz", "gb": "əz" } },
+    { "word": "do", "sound": "duh", "ipa": { "us": "də", "gb": "də" } },
+    { "word": "does", "sound": "duz", "ipa": { "us": "dəz", "gb": "dəz" } },
+    { "word": "than", "sound": "th'n", "ipa": { "us": "ðən", "gb": "ðən" } },
+    { "word": "you", "sound": "ya", "ipa": { "us": "jə", "gb": "jə" } },
+    { "word": "your", "sound": "yer", "ipa": { "us": "jɚ", "gb": "jə" } },
+    { "word": "her", "sound": "er", "ipa": { "us": "ɚ", "gb": "ə" } },
+    { "word": "have", "sound": "uv", "ipa": { "us": "əv", "gb": "əv" } },
+    { "word": "them", "sound": "'em", "ipa": { "us": "əm", "gb": "əm" } }
+  ],
+  "fusions": [
+    { "words": "going to", "sound": "gonna", "ipa": { "us": "ˈgʌnə", "gb": "ˈgənə" } },
+    { "words": "want to", "sound": "wanna", "ipa": { "us": "ˈwɑːnə", "gb": "ˈwɒnə" } },
+    { "words": "got to", "sound": "gotta", "ipa": { "us": "ˈgɑːɾə", "gb": "ˈgɒtə" } },
+    { "words": "have to", "sound": "hafta", "ipa": { "us": "ˈhæftə", "gb": "ˈhæftə" } },
+    { "words": "has to", "sound": "hasta", "ipa": { "us": "ˈhæstə", "gb": "ˈhæstə" } },
+    { "words": "used to", "sound": "useta", "ipa": { "us": "ˈjuːstə", "gb": "ˈjuːstə" } },
+    { "words": "ought to", "sound": "oughta", "ipa": { "us": "ˈɑːɾə", "gb": "ˈɔːtə" } },
+    { "words": "kind of", "sound": "kinda", "ipa": { "us": "ˈkaɪndə", "gb": "ˈkaɪndə" } },
+    { "words": "sort of", "sound": "sorta", "ipa": { "us": "ˈsɔːrɾə", "gb": "ˈsɔːtə" } },
+    { "words": "a lot of", "sound": "a lotta", "ipa": { "us": "ə ˈlɑːɾə", "gb": "ə ˈlɒtə" } },
+    { "words": "out of", "sound": "outta", "ipa": { "us": "ˈaʊɾə", "gb": "ˈaʊtə" } },
+    { "words": "let me", "sound": "lemme", "ipa": { "us": "ˈlemi", "gb": "ˈlemi" } },
+    { "words": "give me", "sound": "gimme", "ipa": { "us": "ˈgɪmi", "gb": "ˈgɪmi" } },
+    { "words": "don't know", "sound": "dunno", "ipa": { "us": "dəˈnoʊ", "gb": "dəˈnəʊ" } },
+    { "words": "what do you", "sound": "whaddya", "ipa": { "us": "ˈwʌɾəjə", "gb": "ˈwɒdəjə" } },
+    { "words": "what are you", "sound": "whatcha", "ipa": { "us": "ˈwʌtʃə", "gb": "ˈwɒtʃə" } },
+    { "words": "don't you", "sound": "dontcha", "ipa": { "us": "ˈdoʊntʃə", "gb": "ˈdəʊntʃə" } },
+    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } }
+  ]
+}

@@ -1,0 +1,14 @@
+[package]
+name = "sanjeh"
+version = "0.1.0"
+description = "Measures for language learning: how hard an English line is to hear and to say, word levels, connected speech — with benchmarks to improve them"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+flate2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+unicode-normalization = { workspace = true }
