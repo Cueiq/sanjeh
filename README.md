@@ -33,15 +33,147 @@ You need [Rust](https://rustup.rs) 1.85 or newer.
 ```bash
 git clone https://github.com/its-saeed/sanjeh && cd sanjeh
 cargo test
-echo '{"text": "Can I get a coffee, please?", "duration_ms": 1500}' | cargo sanjeh line measure -
+cargo sanjeh melts "I'm going to tell him."
 ```
 
-For each skill, `ear` and `mouth`, you get whether the line can be practised,
-its level on the CEFR scale (A1 = 1 … C2 = 6), its worth (0–1), and the
-reasons: its pace, the words that melt (*the-rare* for *there are*), the
-sounds learners find hard, the words above B1.
+`cargo sanjeh` runs the command-line tool; every example below is real
+output from it. To use Sanjeh as a library, add it from Git:
 
-As a library:
+```toml
+[dependencies]
+sanjeh = { git = "https://github.com/its-saeed/sanjeh" }
+```
+
+## The measures
+
+### How a word sounds — `pronounce`
+
+The sound of a word or phrase in IPA, in American or British English, from
+two open pronouncing dictionaries rewritten the way learners' dictionaries
+write them: length marks, one main stress, `ɚ` and `ə`.
+
+```console
+$ cargo sanjeh pronounce water
+ˈwɔːtɚ
+$ cargo sanjeh pronounce --gb water
+ˈwɔːtə
+$ cargo sanjeh pronounce a cup of tea
+ə kʌp ʌv tiː
+$ cargo sanjeh pronounce read
+read more than one way: red, riːd
+```
+
+A word whose readings mean different things (*read* now and before) is
+*ambiguous*: the table won't choose for you, but `readings()` gives them all.
+
+```rust
+sanjeh::pronounce("water", sanjeh::Accent::Gb)   // Pronounced::Known("ˈwɔːtə")
+sanjeh::readings("with", sanjeh::Accent::Gb)     // ["wɪð", "wɪθ"]
+```
+
+### Where words melt — `connected`
+
+In real speech words run into each other, and that, more than unknown
+words, is why learners who can read a line can't hear it. Sanjeh finds where
+a line's words melt by twelve rules of connected speech, from each word's
+sound in the learner's accent: **linking** (*pick it* → *pi-kit*), **weak
+forms** (*to* → *tuh*), **fusions** (*going to* → *gonna*), **elision** (*and
+shine* → *an shine*), **yod** (*did you* → *didja*), **dropped h** (*tell him*
+→ *te-lim*), **dropped g** (*getting* → *gettin'*), ***'em*** (*tell them* →
+*te-lem*), the American **soft t** (*water* → *wader*), the British **cut-off
+t**, **assimilation** (*in my* → *im my*) and the British **linking r**.
+
+```console
+$ cargo sanjeh melts "Did you eat?"
+Didja eat?
+  yod           didja
+  linking       you-weat
+$ cargo sanjeh melts "Get a lot of water."
+Get a lotta wader.
+  fusion        a lotta
+  flap-t        wader
+$ cargo sanjeh melts --gb "Tell them to come in."
+Te-lem tuh co-min.
+  them          te-lem
+  weak-form     tuh
+  linking       co-min
+```
+
+The accent matters: *Pick it up* is *Pi-ki-tup* in British English and
+*Pi-ki-dup* in American. Nothing melts across punctuation, where a speaker
+pauses. `melts()` gives each melt with its rule, words and IPA; `melted()`
+draws them into the stretches a learner reads. The rules, their names and
+explanations in English and Persian, and their word lists are data:
+`data/connected-speech.json`.
+
+### What level a word is — `levels`
+
+A word's CEFR level, by the open CEFR-J Wordlist (A1–B2) and the Octanove
+Vocabulary Profile (C1–C2), found through its forms: *went* is *go*, *grieving*
+is *grieve*.
+
+```console
+$ cargo sanjeh level go went grieving devastating toughie
+go: A1
+went: A1
+grieving: B2
+devastating: B1
+toughie: not in the lists
+```
+
+The lists grade words, not meanings, and miss much spoken English
+(*toughie*, *geez*): a word's level in its sentence is a measure still to
+come.
+
+### How hard a line is to hear and to say — `line`
+
+A line from a film or a series, measured for two skills: the **ear**
+(writing it down from the audio: dictation) and the **mouth** (saying it with
+the speaker: shadowing). For each, whether it can be practised at all, its
+level on the CEFR scale, how much it is worth practising, and the reasons, so
+an app can tell a learner *why*.
+
+```console
+$ cargo sanjeh line show --ms 2400 "He reckons the whole thing's a waste of time."
+ear   B2 (4.2) · worth 0.28 · can be practised
+      9 words in 2.4 s
+      reckons (B2)
+      90% everyday words
+mouth B1 (3.7) · worth 0.68 · can be practised
+      9 words in 2.4 s
+      the → thuh (weak-form)
+      thing's a → thing-za (linking)
+      a → uh (weak-form)
+      waste of → was-tof (linking)
+      of → uv (weak-form)
+      th in thing's
+      w in waste
+      reckons (B2)
+      90% everyday words
+```
+
+Some lines can't be practised, and say why: a sentence cut off, two people
+speaking, a line too short to hold anything, or a word said wrong on purpose,
+which leaves no answer to hold a learner to:
+
+```console
+$ cargo sanjeh line show --ms 2500 "You are weawy getting on my nerves."
+ear   B1 (3.7) · worth 0.33 · can't be practised: said wrong on purpose (weawy)
+…
+```
+
+The level and worth come from a **model** in `models/line/`: weights over
+the line's features (its pace, length, melts, hard words, the sounds learners
+find hard such as *th* and *w*, and the *weak ear*: what weaker speech
+recognisers missed in the clip, given as `heard`, since learners' mistakes
+rise where recognisers err). The default, `v1`, is a first model, fitted to
+one learner's ratings: its levels bunch around B1 and B2. A benchmark rated
+by learners at every level ([#1](https://github.com/its-saeed/sanjeh/issues/1))
+is what will spread them out.
+
+```bash
+echo '{"text": "Where did you put the keys?", "duration_ms": 1400}' | cargo sanjeh line measure -   # JSON, for programs
+```
 
 ```rust
 use sanjeh::line::{LineInput, default_model, measure};
@@ -51,9 +183,17 @@ let measured = measure(&line, default_model());
 println!("{:.1} to hear, {:.1} to say", measured.ear.level, measured.mouth.level);
 ```
 
-and `sanjeh::pronounce("thought", sanjeh::Accent::Gb)`,
-`sanjeh::connected::melts("pick it up", sanjeh::Accent::Us)`,
-`sanjeh::levels::word_level("grieving")`.
+### Measures to come
+
+- **A spoken try** ([#9](https://github.com/its-saeed/sanjeh/issues/9)): how
+  close a learner's try came to the speaker's rhythm, intonation, stress and
+  sounds, judged against experts' scores.
+- **Two voices** ([#6](https://github.com/its-saeed/sanjeh/issues/6)): a
+  subtitle line said by two people split into one line each.
+- **The weak ear built in** ([#5](https://github.com/its-saeed/sanjeh/issues/5)):
+  Sanjeh running the speech recognisers itself.
+- **A word's level in its sentence**, and **placement**: a learner's level for
+  listening and for speaking, by a short adaptive test.
 
 ## How it is built
 
