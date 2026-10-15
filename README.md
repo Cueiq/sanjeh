@@ -192,8 +192,10 @@ println!("{:.1} to hear, {:.1} to say", measured.ear.level, measured.mouth.level
   subtitle line said by two people split into one line each.
 - **The weak ear built in** ([#5](https://github.com/its-saeed/sanjeh/issues/5)):
   Sanjeh running the speech recognisers itself.
-- **A word's level in its sentence**, and **placement**: a learner's level for
-  listening and for speaking, by a short adaptive test.
+- **Placement**: a learner's level for listening and for speaking, by a
+  five-minute adaptive test, kept up to date by their practice — see
+  [the design](docs/placement.md).
+- **A word's level in its sentence**, not only by the word lists.
 
 ## How it is built
 
