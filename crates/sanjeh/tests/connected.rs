@@ -24,8 +24,7 @@ const RULES: [&str; 12] = [
 ];
 
 fn has_both(ipa: &Sounds) -> bool {
-    ipa.get(Accent::Us).is_some_and(|us| !us.is_empty())
-        && ipa.get(Accent::Gb).is_some_and(|gb| !gb.is_empty())
+    ipa.get(Accent::Us).is_some_and(|us| !us.is_empty()) && ipa.get(Accent::Gb).is_some_and(|gb| !gb.is_empty())
 }
 
 #[test]
@@ -36,11 +35,7 @@ fn the_twelve_rules_in_their_learning_order() {
     assert_eq!(ids, RULES);
     let orders: Vec<u8> = data.rules.iter().map(|rule| rule.order).collect();
     assert!(orders.is_sorted(), "{orders:?}");
-    assert_eq!(
-        orders.iter().collect::<HashSet<_>>().len(),
-        9,
-        "nine steps: {orders:?}"
-    );
+    assert_eq!(orders.iter().collect::<HashSet<_>>().len(), 9, "nine steps: {orders:?}");
     let beginners: Vec<&str> = data
         .rules
         .iter()
@@ -53,11 +48,7 @@ fn the_twelve_rules_in_their_learning_order() {
 #[test]
 fn an_accent_meets_its_own_rules() {
     let data = connected_speech();
-    let ids = |accent| -> Vec<&str> {
-        data.rules_for(accent)
-            .map(|rule| rule.id.as_str())
-            .collect()
-    };
+    let ids = |accent| -> Vec<&str> { data.rules_for(accent).map(|rule| rule.id.as_str()).collect() };
     let (us, gb) = (ids(Accent::Us), ids(Accent::Gb));
     assert!(us.contains(&"flap-t") && !gb.contains(&"flap-t"));
     assert!(gb.contains(&"glottal-t") && !us.contains(&"glottal-t"));
@@ -75,11 +66,7 @@ fn every_rule_is_named_and_explained_in_english_and_persian() {
             let persian = &texts["fa"];
             // Persian letters, not Arabic ones, and the verb prefix joined
             // with the zero-width non-joiner.
-            assert!(
-                !persian.contains(['ي', 'ك']),
-                "{} {what}: {persian}",
-                rule.id
-            );
+            assert!(!persian.contains(['ي', 'ك']), "{} {what}: {persian}", rule.id);
             assert!(
                 !persian.split_whitespace().any(|word| word == "می"),
                 "{} {what}: {persian}",
@@ -101,10 +88,7 @@ fn every_example_shows_its_melt_in_the_accents_of_its_rule() {
         for example in &rule.examples {
             let at = format!("{} {:?}", rule.id, example.melt);
             assert!(
-                example
-                    .text
-                    .to_lowercase()
-                    .contains(&example.melt.to_lowercase()),
+                example.text.to_lowercase().contains(&example.melt.to_lowercase()),
                 "{at}: not in {:?}",
                 example.text
             );
@@ -120,9 +104,7 @@ fn every_example_shows_its_melt_in_the_accents_of_its_rule() {
             };
             assert_eq!(accents, wanted, "{at}: its IPA's accents");
             if let Some(from) = &example.from {
-                let (lesson, line) = from
-                    .split_once(" #")
-                    .unwrap_or_else(|| panic!("{at}: {from}"));
+                let (lesson, line) = from.split_once(" #").unwrap_or_else(|| panic!("{at}: {from}"));
                 assert!(
                     lesson
                         .chars()
@@ -138,56 +120,24 @@ fn every_example_shows_its_melt_in_the_accents_of_its_rule() {
 #[test]
 fn the_word_lists_are_whole_and_the_examples_in_them() {
     let data = connected_speech();
-    let weak: HashSet<&str> = data
-        .weak_forms
-        .iter()
-        .map(|form| form.word.as_str())
-        .collect();
-    assert_eq!(
-        weak.len(),
-        data.weak_forms.len(),
-        "a weak form listed twice"
-    );
-    let fused: HashSet<&str> = data
-        .fusions
-        .iter()
-        .map(|fusion| fusion.words.as_str())
-        .collect();
+    let weak: HashSet<&str> = data.weak_forms.iter().map(|form| form.word.as_str()).collect();
+    assert_eq!(weak.len(), data.weak_forms.len(), "a weak form listed twice");
+    let fused: HashSet<&str> = data.fusions.iter().map(|fusion| fusion.words.as_str()).collect();
     assert_eq!(fused.len(), data.fusions.len(), "a fusion listed twice");
     for form in &data.weak_forms {
-        assert!(
-            has_both(&form.ipa) && !form.sound.is_empty(),
-            "{}",
-            form.word
-        );
+        assert!(has_both(&form.ipa) && !form.sound.is_empty(), "{}", form.word);
     }
     for fusion in &data.fusions {
-        assert!(
-            has_both(&fusion.ipa) && !fusion.sound.is_empty(),
-            "{}",
-            fusion.words
-        );
-        assert!(
-            fusion.words.contains(' '),
-            "{}: two words or more",
-            fusion.words
-        );
+        assert!(has_both(&fusion.ipa) && !fusion.sound.is_empty(), "{}", fusion.words);
+        assert!(fusion.words.contains(' '), "{}: two words or more", fusion.words);
     }
     // A fusion's examples are fusions on the list, and a weak form's have a
     // word on it.
     for example in &data.rule("fusion").expect("fusion").examples {
-        assert!(
-            fused.contains(example.melt.to_lowercase().as_str()),
-            "{}",
-            example.melt
-        );
+        assert!(fused.contains(example.melt.to_lowercase().as_str()), "{}", example.melt);
     }
     for example in &data.rule("weak-form").expect("weak-form").examples {
         let melt = example.melt.to_lowercase();
-        assert!(
-            melt.split(' ').any(|word| weak.contains(word)),
-            "{}",
-            example.melt
-        );
+        assert!(melt.split(' ').any(|word| weak.contains(word)), "{}", example.melt);
     }
 }

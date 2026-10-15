@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 pub use features::{Facts, Features, facts};
 pub use heard::{Heard, HeardWord};
-pub use model::{LinearModel, LineModel, SkillModel};
+pub use model::{LineModel, LinearModel, SkillModel};
 
 use crate::Accent;
 use crate::levels::Level;
@@ -76,7 +76,10 @@ pub struct Entry {
 impl Entry {
     /// Whether the entry is something learnt from the line's words.
     pub fn learnt(&self) -> bool {
-        matches!(self.kind.as_str(), "word" | "phrase" | "phrasal_verb" | "idiom" | "expression" | "slang" | "grammar")
+        matches!(
+            self.kind.as_str(),
+            "word" | "phrase" | "phrasal_verb" | "idiom" | "expression" | "slang" | "grammar"
+        )
     }
 }
 
@@ -119,7 +122,11 @@ pub enum WhyNot {
 #[serde(tag = "reason", rename_all = "snake_case")]
 pub enum Reason {
     /// How many words, in how long.
-    Pace { words: usize, seconds: f64, syllables: usize },
+    Pace {
+        words: usize,
+        seconds: f64,
+        syllables: usize,
+    },
     /// Words that melt into each other, by the rules of connected speech.
     Melt { rule: String, text: String, sound: String },
     /// A pair written as it is said: *gonna* for *going to*.
@@ -163,7 +170,8 @@ pub struct LineMeasure {
 /// `models/line/` that has beaten the one before it on the benchmarks.
 pub fn default_model() -> &'static LineModel {
     static MODEL: std::sync::LazyLock<LineModel> = std::sync::LazyLock::new(|| {
-        LineModel::from_json(include_str!("../../../../models/line/v1.json")).expect("models/line/v1.json is a line model")
+        LineModel::from_json(include_str!("../../../../models/line/v1.json"))
+            .expect("models/line/v1.json is a line model")
     });
     &MODEL
 }
@@ -185,7 +193,11 @@ pub fn measure(input: &LineInput, model: &LineModel) -> LineMeasure {
             reasons: facts.reasons(skill),
         }
     };
-    LineMeasure { ear: skill(Skill::Ear), mouth: skill(Skill::Mouth), features: facts.features.clone() }
+    LineMeasure {
+        ear: skill(Skill::Ear),
+        mouth: skill(Skill::Mouth),
+        features: facts.features.clone(),
+    }
 }
 
 fn sigmoid(x: f64) -> f64 {

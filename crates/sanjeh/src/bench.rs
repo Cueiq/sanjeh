@@ -83,7 +83,13 @@ pub fn auc(scored: &[(f64, bool)]) -> Option<f64> {
     let mut won = 0.0;
     for p in &pos {
         for n in &neg {
-            won += if p > n { 1.0 } else if p == n { 0.5 } else { 0.0 };
+            won += if p > n {
+                1.0
+            } else if p == n {
+                0.5
+            } else {
+                0.0
+            };
         }
     }
     Some(won / (pos.len() * neg.len()) as f64)
@@ -120,16 +126,31 @@ pub fn report(items: &[(Item, LineMeasure)], skill: Skill) -> SkillReport {
         }
     }
     let share = |hits: usize, of: usize| (of > 0).then(|| hits as f64 / of as f64);
-    let voted: Vec<_> = rows.iter().filter_map(|(level, _, l)| l.level.map(|v| (*level, v, l.rater_level))).collect();
+    let voted: Vec<_> = rows
+        .iter()
+        .filter_map(|(level, _, l)| l.level.map(|v| (*level, v, l.rater_level)))
+        .collect();
     let matched = voted.iter().filter(|(level, v, r)| vote_for(*level, *r) == *v).count();
-    let level_auc = auc(&voted.iter().map(|(level, v, r)| (level - r.rank(), *v != Vote::Easy)).collect::<Vec<_>>());
-    let worths: Vec<_> = rows.iter().filter_map(|(_, w, l)| l.worth.map(|x| (*w, x == Worth::Yes))).collect();
-    let at_level: Vec<_> = voted.iter().filter(|(level, _, r)| vote_for(*level, *r) == Vote::Right).collect();
+    let level_auc = auc(&voted
+        .iter()
+        .map(|(level, v, r)| (level - r.rank(), *v != Vote::Easy))
+        .collect::<Vec<_>>());
+    let worths: Vec<_> = rows
+        .iter()
+        .filter_map(|(_, w, l)| l.worth.map(|x| (*w, x == Worth::Yes)))
+        .collect();
+    let at_level: Vec<_> = voted
+        .iter()
+        .filter(|(level, _, r)| vote_for(*level, *r) == Vote::Right)
+        .collect();
     let called: Vec<_> = worths.iter().filter(|(w, _)| *w > 0.5).collect();
     let by_level = Level::ALL
         .into_iter()
         .filter_map(|band| {
-            let here: Vec<_> = voted.iter().filter(|(level, _, _)| Level::of_rank(*level) == band).collect();
+            let here: Vec<_> = voted
+                .iter()
+                .filter(|(level, _, _)| Level::of_rank(*level) == band)
+                .collect();
             (!here.is_empty()).then(|| {
                 let hit = here.iter().filter(|(level, v, r)| vote_for(*level, *r) == *v).count();
                 (band, here.len(), hit as f64 / here.len() as f64)
@@ -141,7 +162,10 @@ pub fn report(items: &[(Item, LineMeasure)], skill: Skill) -> SkillReport {
         votes_matched: share(matched, voted.len()),
         level_auc,
         worth_auc: auc(&worths),
-        at_level_right: share(at_level.iter().filter(|(_, v, _)| *v == Vote::Right).count(), at_level.len()),
+        at_level_right: share(
+            at_level.iter().filter(|(_, v, _)| *v == Vote::Right).count(),
+            at_level.len(),
+        ),
         worth_yes: share(called.iter().filter(|(_, y)| *y).count(), called.len()),
         by_level,
     }

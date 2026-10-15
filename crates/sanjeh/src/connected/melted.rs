@@ -50,13 +50,8 @@ pub fn melted(line: &str, melts: &[Melt]) -> Vec<Piece> {
 /// without being written.
 fn piece(line: &str, words: &[String], melts: &[Melt], group: Vec<usize>) -> Piece {
     let from = melts[group[0]].span.start;
-    let to = group
-        .iter()
-        .map(|&at| melts[at].span.end)
-        .max()
-        .unwrap_or(from);
-    let (joints, own): (Vec<usize>, Vec<usize>) =
-        group.iter().partition(|&&at| melts[at].words.len() >= 2);
+    let to = group.iter().map(|&at| melts[at].span.end).max().unwrap_or(from);
+    let (joints, own): (Vec<usize>, Vec<usize>) = group.iter().partition(|&&at| melts[at].words.len() >= 2);
 
     let said = match joints.split_first() {
         None => melts[group[0]].sound.clone(),
@@ -125,10 +120,7 @@ fn as_in_line(said: &str, line: &str, from: usize) -> String {
     let mut token_start = true;
     let chars: Vec<char> = said.chars().collect();
     for (at, &c) in chars.iter().enumerate() {
-        let alone = token_start
-            && chars
-                .get(at + 1)
-                .is_none_or(|next| matches!(next, ' ' | '-' | '\''));
+        let alone = token_start && chars.get(at + 1).is_none_or(|next| matches!(next, ' ' | '-' | '\''));
         if (at == 0 && first_upper) || (c == 'i' && alone) {
             written.extend(c.to_uppercase());
         } else {
@@ -155,28 +147,16 @@ mod tests {
     #[test]
     fn a_weak_word_inside_a_link_is_written_weak() {
         assert_eq!(
-            said(
-                "This is the story of two girls who share a flat in London.",
-                Accent::Gb
-            ),
+            said("This is the story of two girls who share a flat in London.", Accent::Gb),
             ["Thi-sis", "thuh", "story-yuv", "sha-ruh", "fla-tin"]
         );
-        assert_eq!(
-            said("Oh, you have a cold, Bridget.", Accent::Gb),
-            ["ya", "ha-vuh"]
-        );
+        assert_eq!(said("Oh, you have a cold, Bridget.", Accent::Gb), ["ya", "ha-vuh"]);
     }
 
     #[test]
     fn two_joints_over_one_word_run_on() {
-        assert_eq!(
-            said("Come on. Rise and shine.", Accent::Gb),
-            ["Co-mon", "Ri-zan shine"]
-        );
-        assert_eq!(
-            said("I have this car at home.", Accent::Gb),
-            ["ca-ra' home"]
-        );
+        assert_eq!(said("Come on. Rise and shine.", Accent::Gb), ["Co-mon", "Ri-zan shine"]);
+        assert_eq!(said("I have this car at home.", Accent::Gb), ["ca-ra' home"]);
     }
 
     #[test]
@@ -191,10 +171,7 @@ mod tests {
         assert_eq!(as_in_line("an i", "and I", 0), "an I");
         assert_eq!(as_in_line("an i'm", "and I'm", 0), "an I'm");
         assert_eq!(as_in_line("i'd go", "I'd go", 0), "I'd go");
-        assert_eq!(
-            said("I am Nick. I live next door.", Accent::Gb),
-            ["nex door"]
-        );
+        assert_eq!(said("I am Nick. I live next door.", Accent::Gb), ["nex door"]);
     }
 
     #[test]
@@ -207,10 +184,9 @@ mod tests {
         let rules: Vec<&str> = pieces[1].melts.iter().map(|&at| found[at].rule).collect();
         assert_eq!(rules, ["linking", "weak-form"]);
         let span = &pieces[1].span;
-        let text: String =
-            char::decode_utf16(line.encode_utf16().skip(span.start).take(span.len()))
-                .map(Result::unwrap)
-                .collect();
+        let text: String = char::decode_utf16(line.encode_utf16().skip(span.start).take(span.len()))
+            .map(Result::unwrap)
+            .collect();
         assert_eq!(text, "have a");
     }
 }

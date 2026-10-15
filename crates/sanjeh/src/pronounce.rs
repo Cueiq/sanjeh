@@ -36,10 +36,7 @@ struct Table {
 impl Table {
     fn line(&self, at: usize) -> &str {
         let start = self.lines[at] as usize;
-        let end = self
-            .lines
-            .get(at + 1)
-            .map_or(self.text.len(), |next| *next as usize);
+        let end = self.lines.get(at + 1).map_or(self.text.len(), |next| *next as usize);
         self.text[start..end].trim_end_matches('\n')
     }
 
@@ -143,7 +140,10 @@ pub fn readings(word: &str, accent: Accent) -> Vec<String> {
         Accent::Us => entry.us,
         Accent::Gb => entry.gb,
     };
-    side.split('|').filter(|sound| !sound.is_empty()).map(str::to_owned).collect()
+    side.split('|')
+        .filter(|sound| !sound.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 enum Found {
@@ -225,14 +225,8 @@ mod tests {
         // CMU marks both of okay's syllables main.
         assert_eq!(known("OK", Accent::Us).as_deref(), Some("ˌoʊˈkeɪ"));
         // No syllable begins /sf/ inside a word; a word's first may.
-        assert_eq!(
-            known("transfusion", Accent::Us).as_deref(),
-            Some("trænsˈfjuːʒən")
-        );
-        assert_eq!(
-            known("atmosphere", Accent::Gb).as_deref(),
-            Some("ˈætməsˌfɪə")
-        );
+        assert_eq!(known("transfusion", Accent::Us).as_deref(), Some("trænsˈfjuːʒən"));
+        assert_eq!(known("atmosphere", Accent::Gb).as_deref(), Some("ˈætməsˌfɪə"));
         assert_eq!(known("spherical", Accent::Us).as_deref(), Some("ˈsferɪkəl"));
         assert_eq!(known("influence", Accent::Us).as_deref(), Some("ˈɪnfluəns"));
     }
@@ -243,10 +237,7 @@ mod tests {
         assert_eq!(known("No way!", Accent::Gb).as_deref(), Some("nəʊ weɪ"));
         assert_eq!(known("Don’t", Accent::Us).as_deref(), Some("doʊnt"));
         assert_eq!(known("'em", Accent::Gb).as_deref(), Some("əm"));
-        assert_eq!(
-            pronounce("'Hello'", Accent::Us),
-            pronounce("hello", Accent::Us)
-        );
+        assert_eq!(pronounce("'Hello'", Accent::Us), pronounce("hello", Accent::Us));
         // Every apostrophe read as one, and composed.
         assert_eq!(known("don‛t", Accent::Us), known("don't", Accent::Us));
         assert_eq!(known("don`t", Accent::Us), known("don't", Accent::Us));
@@ -267,10 +258,7 @@ mod tests {
         assert_eq!(pronounce("'cause", Accent::Gb), Pronounced::Unknown);
         assert_eq!(known("'cause", Accent::Us).as_deref(), Some("kəz"));
         // A plural's possessive sounds as the plural.
-        assert_eq!(
-            known("the girls'", Accent::Gb),
-            known("the girls", Accent::Gb)
-        );
+        assert_eq!(known("the girls'", Accent::Gb), known("the girls", Accent::Gb));
     }
 
     #[test]
@@ -278,28 +266,16 @@ mod tests {
         assert_eq!(known("I'm", Accent::Gb).as_deref(), Some("aɪm"));
         assert_eq!(known("it's", Accent::Gb).as_deref(), Some("ɪts"));
         assert_eq!(known("we're", Accent::Gb).as_deref(), Some("wɪə"));
-        assert_eq!(
-            known("the horse's", Accent::Gb).as_deref(),
-            Some("ðə ˈhɔːsɪz")
-        );
+        assert_eq!(known("the horse's", Accent::Gb).as_deref(), Some("ðə ˈhɔːsɪz"));
     }
 
     #[test]
     fn a_hyphenated_word_not_in_the_table_is_its_parts_each_with_its_stress() {
         assert_eq!(known("bike-shed", Accent::Gb).as_deref(), Some("baɪk ʃed"));
-        assert_eq!(
-            known("twenty-two", Accent::Gb).as_deref(),
-            Some("ˈtwenti tuː")
-        );
+        assert_eq!(known("twenty-two", Accent::Gb).as_deref(), Some("ˈtwenti tuː"));
         // The hyphens a subtitle may write instead.
-        assert_eq!(
-            known("twenty\u{2011}two", Accent::Gb),
-            known("twenty-two", Accent::Gb)
-        );
-        assert_eq!(
-            known("twenty\u{2010}two", Accent::Gb),
-            known("twenty-two", Accent::Gb)
-        );
+        assert_eq!(known("twenty\u{2011}two", Accent::Gb), known("twenty-two", Accent::Gb));
+        assert_eq!(known("twenty\u{2010}two", Accent::Gb), known("twenty-two", Accent::Gb));
     }
 
     #[test]

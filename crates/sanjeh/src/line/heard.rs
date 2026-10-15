@@ -62,10 +62,20 @@ const FILLERS: &[&str] = &["um", "uh", "er", "erm", "oh", "ah", "hmm", "mm", "li
 
 /// Forms written two ways: either matches the other.
 const SAME: &[(&str, &str)] = &[
-    ("ok", "okay"), ("alright", "all right"), ("gonna", "going to"), ("wanna", "want to"),
-    ("gotta", "got to"), ("kinda", "kind of"), ("sorta", "sort of"), ("outta", "out of"),
-    ("lotta", "lot of"), ("dunno", "don't know"), ("ya", "you"), ("mr", "mister"),
-    ("mrs", "missus"), ("til", "until"),
+    ("ok", "okay"),
+    ("alright", "all right"),
+    ("gonna", "going to"),
+    ("wanna", "want to"),
+    ("gotta", "got to"),
+    ("kinda", "kind of"),
+    ("sorta", "sort of"),
+    ("outta", "out of"),
+    ("lotta", "lot of"),
+    ("dunno", "don't know"),
+    ("ya", "you"),
+    ("mr", "mister"),
+    ("mrs", "missus"),
+    ("til", "until"),
 ];
 
 /// A word as it is compared: lower case, one apostrophe, no hyphens or
@@ -73,15 +83,26 @@ const SAME: &[(&str, &str)] = &[
 pub fn normal(word: &str) -> Vec<String> {
     let word = word.to_lowercase().replace(['’', '‘'], "'");
     let word = word.trim_matches('\'');
-    let word = SAME.iter().find(|(form, _)| *form == word).map_or(word, |(_, full)| full);
-    word.replace(['-', '/'], "").split(' ').filter(|w| !w.is_empty()).map(str::to_string).collect()
+    let word = SAME
+        .iter()
+        .find(|(form, _)| *form == word)
+        .map_or(word, |(_, full)| full);
+    word.replace(['-', '/'], "")
+        .split(' ')
+        .filter(|w| !w.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 /// The words of a text, compared as [`normal`] makes them, each with its
 /// place among the text's own words (`tokens`), which run-together forms
 /// share.
 pub fn words_of(tokens: &[String]) -> Vec<(String, usize)> {
-    tokens.iter().enumerate().flat_map(|(at, token)| normal(token).into_iter().map(move |w| (w, at))).collect()
+    tokens
+        .iter()
+        .enumerate()
+        .flat_map(|(at, token)| normal(token).into_iter().map(move |w| (w, at)))
+        .collect()
 }
 
 fn close(a: &str, b: &str) -> bool {
@@ -146,7 +167,10 @@ pub fn hearing(tokens: &[String], is_name: impl Fn(usize) -> bool, heard: &Heard
         .map(|(i, (w, at))| {
             let next = target.get(i + 1).map(|(w, _)| w.as_str());
             let prev = i.checked_sub(1).map(|p| target[p].0.as_str());
-            if FILLERS.contains(&w.as_str()) || (w == "you" && next == Some("know")) || (w == "know" && prev == Some("you")) {
+            if FILLERS.contains(&w.as_str())
+                || (w == "you" && next == Some("know"))
+                || (w == "know" && prev == Some("you"))
+            {
                 WordKind::Filler
             } else if is_name(*at) {
                 WordKind::Name
@@ -156,14 +180,20 @@ pub fn hearing(tokens: &[String], is_name: impl Fn(usize) -> bool, heard: &Heard
         })
         .collect();
     let model_words = |heard: &[HeardWord]| -> Vec<(String, Option<f64>)> {
-        heard.iter().flat_map(|h| normal(&h.word).into_iter().map(move |w| (w, h.p))).collect()
+        heard
+            .iter()
+            .flat_map(|h| normal(&h.word).into_iter().map(move |w| (w, h.p)))
+            .collect()
     };
     let tiny = model_words(&heard.tiny);
     let base = model_words(&heard.base);
     let small = model_words(&heard.small);
     let plain = |ws: &[(String, Option<f64>)]| ws.iter().map(|(w, _)| w.clone()).collect::<Vec<_>>();
-    let (got_tiny, got_base, got_small) =
-        (heard_which(&words, &plain(&tiny)), heard_which(&words, &plain(&base)), heard_which(&words, &plain(&small)));
+    let (got_tiny, got_base, got_small) = (
+        heard_which(&words, &plain(&tiny)),
+        heard_which(&words, &plain(&base)),
+        heard_which(&words, &plain(&small)),
+    );
 
     // How sure small was of each word it heard, in order.
     let mut p_small = vec![None; words.len()];
@@ -186,7 +216,14 @@ pub fn hearing(tokens: &[String], is_name: impl Fn(usize) -> bool, heard: &Heard
         WordKind::Filler => 0.0,
     };
     let counted = kinds.iter().filter(|k| **k != WordKind::Filler).count().max(1) as f64;
-    let miss = |got: &[bool]| got.iter().zip(&kinds).filter(|(g, _)| !**g).map(|(_, k)| weigh(*k)).sum::<f64>() / counted;
+    let miss = |got: &[bool]| {
+        got.iter()
+            .zip(&kinds)
+            .filter(|(g, _)| !**g)
+            .map(|(_, k)| weigh(*k))
+            .sum::<f64>()
+            / counted
+    };
     let unsure = (0..words.len())
         .filter(|&k| kinds[k] == WordKind::Word && got_small[k] && p_small[k].is_some_and(|p| p < 0.5))
         .count() as f64
@@ -214,40 +251,63 @@ mod tests {
     use super::*;
 
     fn heard(text: &str) -> Vec<HeardWord> {
-        text.split_whitespace().map(|w| HeardWord { word: w.to_string(), p: Some(0.9) }).collect()
+        text.split_whitespace()
+            .map(|w| HeardWord {
+                word: w.to_string(),
+                p: Some(0.9),
+            })
+            .collect()
     }
 
     fn toks(text: &str) -> Vec<String> {
-        text.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'').to_string()).collect()
+        text.split_whitespace()
+            .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'').to_string())
+            .collect()
     }
 
     #[test]
     fn a_word_missed_only_by_the_weakest_ear_weighs_least() {
         let line = toks("I'm having second thoughts.");
-        let h = hearing(&line, |_| false, &Heard {
-            tiny: heard("I have in a second thoughts"),
-            base: heard("I'm having second thoughts"),
-            small: heard("I'm having second thoughts"),
-        });
+        let h = hearing(
+            &line,
+            |_| false,
+            &Heard {
+                tiny: heard("I have in a second thoughts"),
+                base: heard("I'm having second thoughts"),
+                small: heard("I'm having second thoughts"),
+            },
+        );
         assert_eq!((h.miss_tiny, h.miss_base, h.miss_small), (0.5, 0.0, 0.0));
     }
 
     #[test]
     fn a_neighbours_words_in_the_margin_cost_nothing() {
-        let got = heard_which(&["want".into(), "me".into(), "to".into(), "go".into()], &[
-            "yeah".into(), "want".into(), "me".into(), "to".into(), "go".into(), "sure".into(),
-        ]);
+        let got = heard_which(
+            &["want".into(), "me".into(), "to".into(), "go".into()],
+            &[
+                "yeah".into(),
+                "want".into(),
+                "me".into(),
+                "to".into(),
+                "go".into(),
+                "sure".into(),
+            ],
+        );
         assert_eq!(got, [true, true, true, true]);
     }
 
     #[test]
     fn written_together_matches_said_apart_and_fillers_cost_nothing() {
         let line = toks("Anyway, we, you know, kinda comforted each other.");
-        let h = hearing(&line, |_| false, &Heard {
-            tiny: heard("anyway we kind of comforted each other"),
-            base: heard("anyway we kind of comforted each other"),
-            small: heard("anyway we kind of comforted each other"),
-        });
+        let h = hearing(
+            &line,
+            |_| false,
+            &Heard {
+                tiny: heard("anyway we kind of comforted each other"),
+                base: heard("anyway we kind of comforted each other"),
+                small: heard("anyway we kind of comforted each other"),
+            },
+        );
         assert_eq!(h.miss_tiny, 0.0);
     }
 }

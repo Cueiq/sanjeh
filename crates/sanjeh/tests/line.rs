@@ -28,8 +28,15 @@ fn words_said_wrong_on_purpose_have_no_answer_to_hold_to() {
 fn a_pair_written_as_said_and_its_melts_are_reasons() {
     let f = facts(&line("Hey, guys, I'm gonna throw something out there.", 2400));
     let reasons = f.reasons(Skill::Ear);
-    assert!(reasons.contains(&Reason::Written { word: "gonna".into(), full: "going to".into() }));
-    assert!(reasons.iter().any(|r| matches!(r, Reason::Melt { rule, .. } if rule == "g-dropping")));
+    assert!(reasons.contains(&Reason::Written {
+        word: "gonna".into(),
+        full: "going to".into()
+    }));
+    assert!(
+        reasons
+            .iter()
+            .any(|r| matches!(r, Reason::Melt { rule, .. } if rule == "g-dropping"))
+    );
     assert_eq!(f.features["words"], 8.0);
 }
 
@@ -58,7 +65,10 @@ fn a_model_weighs_the_features_it_names() {
 
 #[test]
 fn the_default_model_measures_a_line() {
-    let m = measure(&line("There are no bad situations as long as I'm with you.", 4700), sanjeh::line::default_model());
+    let m = measure(
+        &line("There are no bad situations as long as I'm with you.", 4700),
+        sanjeh::line::default_model(),
+    );
     assert!((1.0..7.0).contains(&m.ear.level) && (0.0..=1.0).contains(&m.mouth.worth));
 }
 
@@ -66,6 +76,10 @@ fn the_default_model_measures_a_line() {
 fn a_word_read_two_ways_still_has_its_hard_sounds() {
     assert!(!sanjeh::readings("with", sanjeh::Accent::Us).is_empty());
     let f = facts(&line("There are no bad situations as long as I'm with you.", 4700));
-    assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "th" && word == "with"));
+    assert!(
+        f.hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "with")
+    );
     assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
 }

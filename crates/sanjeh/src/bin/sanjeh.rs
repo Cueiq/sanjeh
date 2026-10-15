@@ -26,7 +26,10 @@ fn main() -> ExitCode {
 }
 
 fn option<'a>(args: &'a [String], name: &str) -> Option<&'a str> {
-    args.iter().position(|a| a == name).and_then(|at| args.get(at + 1)).map(String::as_str)
+    args.iter()
+        .position(|a| a == name)
+        .and_then(|at| args.get(at + 1))
+        .map(String::as_str)
 }
 
 fn read_items(path: &str) -> Result<Vec<Item>, String> {
@@ -46,7 +49,11 @@ fn read_model(args: &[String]) -> Result<LineModel, String> {
 
 fn run(args: &[String]) -> Result<(), String> {
     let usage = "usage: sanjeh line (features|measure|bench) <items.jsonl> [--model <file>] [--split fit|test]";
-    let (Some("line"), Some(command), Some(path)) = (args.first().map(String::as_str), args.get(1).map(String::as_str), args.get(2)) else {
+    let (Some("line"), Some(command), Some(path)) = (
+        args.first().map(String::as_str),
+        args.get(1).map(String::as_str),
+        args.get(2),
+    ) else {
         return Err(usage.into());
     };
     match command {
@@ -69,7 +76,10 @@ fn run(args: &[String]) -> Result<(), String> {
                     .map(|item| item.input)
                     .or_else(|_| serde_json::from_str(line))
                     .map_err(|e| format!("{path}: {e}"))?;
-                println!("{}", serde_json::to_string(&measure(&input, &model)).map_err(|e| e.to_string())?);
+                println!(
+                    "{}",
+                    serde_json::to_string(&measure(&input, &model)).map_err(|e| e.to_string())?
+                );
             }
         }
         "bench" => {
@@ -98,7 +108,11 @@ fn run(args: &[String]) -> Result<(), String> {
                     pct(r.at_level_right),
                     pct(r.worth_yes),
                 );
-                let by: Vec<String> = r.by_level.iter().map(|(l, n, hit)| format!("{l:?} {n}: {:.0}%", hit * 100.0)).collect();
+                let by: Vec<String> = r
+                    .by_level
+                    .iter()
+                    .map(|(l, n, hit)| format!("{l:?} {n}: {:.0}%", hit * 100.0))
+                    .collect();
                 println!("         by the level it gave: {}", by.join(" · "));
             }
         }

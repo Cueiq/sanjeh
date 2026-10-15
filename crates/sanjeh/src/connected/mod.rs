@@ -20,9 +20,8 @@ pub use melts::{Melt, line_words, melts};
 
 const DATA: &str = crate::CONNECTED_SPEECH_JSON;
 
-static CONNECTED: LazyLock<ConnectedSpeech> = LazyLock::new(|| {
-    serde_json::from_str(DATA).expect("connectedSpeech.json is the rules and their word lists")
-});
+static CONNECTED: LazyLock<ConnectedSpeech> =
+    LazyLock::new(|| serde_json::from_str(DATA).expect("connectedSpeech.json is the rules and their word lists"));
 
 /// The rules and the word lists.
 pub fn connected_speech() -> &'static ConnectedSpeech {
@@ -51,9 +50,7 @@ impl ConnectedSpeech {
     /// the accent's own (flap T in American, glottal T and linking R in
     /// British).
     pub fn rules_for(&self, accent: Accent) -> impl Iterator<Item = &Rule> {
-        self.rules
-            .iter()
-            .filter(move |rule| rule.accent.includes(accent))
+        self.rules.iter().filter(move |rule| rule.accent.includes(accent))
     }
 }
 

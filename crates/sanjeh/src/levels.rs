@@ -35,7 +35,9 @@ impl Level {
     }
 
     pub fn parse(text: &str) -> Option<Level> {
-        Level::ALL.into_iter().find(|level| format!("{level:?}").eq_ignore_ascii_case(text.trim()))
+        Level::ALL
+            .into_iter()
+            .find(|level| format!("{level:?}").eq_ignore_ascii_case(text.trim()))
     }
 }
 
@@ -67,35 +69,126 @@ static WORDS: LazyLock<HashMap<String, Level>> = LazyLock::new(|| {
 
 /// Past forms the suffix rules can't undo, and plurals and comparisons.
 const IRREGULAR: &[(&str, &str)] = &[
-    ("was", "be"), ("were", "be"), ("been", "be"), ("am", "be"), ("is", "be"), ("are", "be"),
-    ("did", "do"), ("done", "do"), ("does", "do"), ("had", "have"), ("has", "have"),
-    ("went", "go"), ("gone", "go"), ("got", "get"), ("gotten", "get"), ("made", "make"),
-    ("said", "say"), ("saw", "see"), ("seen", "see"), ("came", "come"), ("took", "take"),
-    ("taken", "take"), ("knew", "know"), ("known", "know"), ("thought", "think"),
-    ("told", "tell"), ("found", "find"), ("gave", "give"), ("given", "give"), ("felt", "feel"),
-    ("left", "leave"), ("kept", "keep"), ("brought", "bring"), ("bought", "buy"),
-    ("began", "begin"), ("begun", "begin"), ("ran", "run"), ("sat", "sit"), ("stood", "stand"),
-    ("understood", "understand"), ("lost", "lose"), ("paid", "pay"), ("met", "meet"),
-    ("heard", "hear"), ("meant", "mean"), ("wore", "wear"), ("worn", "wear"), ("wrote", "write"),
-    ("written", "write"), ("ate", "eat"), ("eaten", "eat"), ("drank", "drink"), ("drunk", "drink"),
-    ("spoke", "speak"), ("spoken", "speak"), ("broke", "break"), ("broken", "break"),
-    ("chose", "choose"), ("chosen", "choose"), ("forgot", "forget"), ("forgotten", "forget"),
-    ("fell", "fall"), ("fallen", "fall"), ("flew", "fly"), ("flown", "fly"), ("grew", "grow"),
-    ("grown", "grow"), ("threw", "throw"), ("thrown", "throw"), ("drove", "drive"),
-    ("driven", "drive"), ("rode", "ride"), ("ridden", "ride"), ("slept", "sleep"),
-    ("built", "build"), ("sent", "send"), ("spent", "spend"), ("caught", "catch"),
-    ("taught", "teach"), ("fought", "fight"), ("sold", "sell"), ("held", "hold"), ("led", "lead"),
-    ("hid", "hide"), ("hidden", "hide"), ("won", "win"), ("woke", "wake"), ("children", "child"),
-    ("men", "man"), ("women", "woman"), ("people", "person"), ("feet", "foot"), ("teeth", "tooth"),
-    ("mice", "mouse"), ("better", "good"), ("best", "good"), ("worse", "bad"), ("worst", "bad"),
+    ("was", "be"),
+    ("were", "be"),
+    ("been", "be"),
+    ("am", "be"),
+    ("is", "be"),
+    ("are", "be"),
+    ("did", "do"),
+    ("done", "do"),
+    ("does", "do"),
+    ("had", "have"),
+    ("has", "have"),
+    ("went", "go"),
+    ("gone", "go"),
+    ("got", "get"),
+    ("gotten", "get"),
+    ("made", "make"),
+    ("said", "say"),
+    ("saw", "see"),
+    ("seen", "see"),
+    ("came", "come"),
+    ("took", "take"),
+    ("taken", "take"),
+    ("knew", "know"),
+    ("known", "know"),
+    ("thought", "think"),
+    ("told", "tell"),
+    ("found", "find"),
+    ("gave", "give"),
+    ("given", "give"),
+    ("felt", "feel"),
+    ("left", "leave"),
+    ("kept", "keep"),
+    ("brought", "bring"),
+    ("bought", "buy"),
+    ("began", "begin"),
+    ("begun", "begin"),
+    ("ran", "run"),
+    ("sat", "sit"),
+    ("stood", "stand"),
+    ("understood", "understand"),
+    ("lost", "lose"),
+    ("paid", "pay"),
+    ("met", "meet"),
+    ("heard", "hear"),
+    ("meant", "mean"),
+    ("wore", "wear"),
+    ("worn", "wear"),
+    ("wrote", "write"),
+    ("written", "write"),
+    ("ate", "eat"),
+    ("eaten", "eat"),
+    ("drank", "drink"),
+    ("drunk", "drink"),
+    ("spoke", "speak"),
+    ("spoken", "speak"),
+    ("broke", "break"),
+    ("broken", "break"),
+    ("chose", "choose"),
+    ("chosen", "choose"),
+    ("forgot", "forget"),
+    ("forgotten", "forget"),
+    ("fell", "fall"),
+    ("fallen", "fall"),
+    ("flew", "fly"),
+    ("flown", "fly"),
+    ("grew", "grow"),
+    ("grown", "grow"),
+    ("threw", "throw"),
+    ("thrown", "throw"),
+    ("drove", "drive"),
+    ("driven", "drive"),
+    ("rode", "ride"),
+    ("ridden", "ride"),
+    ("slept", "sleep"),
+    ("built", "build"),
+    ("sent", "send"),
+    ("spent", "spend"),
+    ("caught", "catch"),
+    ("taught", "teach"),
+    ("fought", "fight"),
+    ("sold", "sell"),
+    ("held", "hold"),
+    ("led", "lead"),
+    ("hid", "hide"),
+    ("hidden", "hide"),
+    ("won", "win"),
+    ("woke", "wake"),
+    ("children", "child"),
+    ("men", "man"),
+    ("women", "woman"),
+    ("people", "person"),
+    ("feet", "foot"),
+    ("teeth", "tooth"),
+    ("mice", "mouse"),
+    ("better", "good"),
+    ("best", "good"),
+    ("worse", "bad"),
+    ("worst", "bad"),
 ];
 
 /// Endings taken off to find the form a word is listed under, and what
 /// goes back in their place.
 const SUFFIXES: &[(&str, &str)] = &[
-    ("ies", "y"), ("ied", "y"), ("es", ""), ("s", ""), ("ed", ""), ("ed", "e"), ("d", ""),
-    ("ing", ""), ("ing", "e"), ("er", ""), ("est", ""), ("ly", ""), ("ier", "y"), ("iest", "y"),
-    ("ily", "y"), ("ness", ""), ("ful", ""),
+    ("ies", "y"),
+    ("ied", "y"),
+    ("es", ""),
+    ("s", ""),
+    ("ed", ""),
+    ("ed", "e"),
+    ("d", ""),
+    ("ing", ""),
+    ("ing", "e"),
+    ("er", ""),
+    ("est", ""),
+    ("ly", ""),
+    ("ier", "y"),
+    ("iest", "y"),
+    ("ily", "y"),
+    ("ness", ""),
+    ("ful", ""),
 ];
 
 /// The word and the forms it may be listed under: *stopped* → *stop*,
@@ -110,7 +203,8 @@ pub fn base_forms(word: &str) -> Vec<String> {
         // A stem of two letters is a word (go-ing, be-ing), never one.
         if let Some(stem) = word.strip_suffix(suffix).filter(|stem| stem.chars().count() >= 2) {
             let stem = format!("{stem}{put}");
-            let doubled = put.is_empty() && stem.len() > 2 && stem.as_bytes()[stem.len() - 1] == stem.as_bytes()[stem.len() - 2];
+            let doubled =
+                put.is_empty() && stem.len() > 2 && stem.as_bytes()[stem.len() - 1] == stem.as_bytes()[stem.len() - 2];
             if doubled {
                 forms.push(stem[..stem.len() - 1].to_string());
             }
@@ -123,7 +217,11 @@ pub fn base_forms(word: &str) -> Vec<String> {
 /// The level a word is listed at, by its lowest-listed form; `None` for a
 /// word the lists don't have (a name, slang, a rare word).
 pub fn word_level(word: &str) -> Option<Level> {
-    base_forms(word).iter().filter_map(|form| WORDS.get(form)).min().copied()
+    base_forms(word)
+        .iter()
+        .filter_map(|form| WORDS.get(form))
+        .min()
+        .copied()
 }
 
 #[cfg(test)]

@@ -14,10 +14,7 @@ fn found(line: &str, accent: Accent) -> Vec<String> {
 
 fn has(line: &str, accent: Accent, melt: &str) {
     let found = found(line, accent);
-    assert!(
-        found.iter().any(|one| one == melt),
-        "{line:?} ({accent:?}): {found:?}"
-    );
+    assert!(found.iter().any(|one| one == melt), "{line:?} ({accent:?}): {found:?}");
 }
 
 fn lacks(line: &str, accent: Accent, rule: &str) {
@@ -134,10 +131,7 @@ fn a_british_r_comes_back_before_a_vowel() {
 #[test]
 fn a_melt_knows_its_words_and_their_place_in_the_line() {
     let found = melts("Oh, good boy!", Gb);
-    let good_boy = found
-        .iter()
-        .find(|melt| melt.rule == "assimilation")
-        .expect("good boy");
+    let good_boy = found.iter().find(|melt| melt.rule == "assimilation").expect("good boy");
     assert_eq!(good_boy.words, 1..3);
     assert_eq!(good_boy.span, 4..12);
     assert_eq!(good_boy.ipa, "gʊb bɔɪ");
@@ -178,11 +172,7 @@ fn the_sound_is_written_as_it_is_heard() {
 #[test]
 fn some_words_are_left_alone() {
     // Letters said one by one.
-    assert!(
-        found("I got the GPS on.", Us)
-            .iter()
-            .all(|melt| !melt.contains("gp"))
-    );
+    assert!(found("I got the GPS on.", Us).iter().all(|melt| !melt.contains("gp")));
     // A t before /ən/ is held, not softened.
     lacks("It's important.", Us, "flap-t");
     // An -ing word is said -in', and doesn't link as -ing.

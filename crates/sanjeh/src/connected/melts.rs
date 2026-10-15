@@ -49,9 +49,7 @@ pub fn melts(line: &str, accent: Accent) -> Vec<Melt> {
         if taken[at] {
             continue;
         }
-        let last_in_phrase = words
-            .get(at + 1)
-            .is_none_or(|next| next.phrase != word.phrase);
+        let last_in_phrase = words.get(at + 1).is_none_or(|next| next.phrase != word.phrase);
         let mut alone = vec![g_dropping(word)];
         if accent == Accent::Us {
             alone.push(soft_t_inside(word));
@@ -109,8 +107,7 @@ fn phrased(line: &str) -> Vec<(Range<usize>, usize)> {
         if c.is_alphanumeric() {
             let mut end = at + 1;
             // An apostrophe or a hyphen inside a word is part of it.
-            while end < chars.len()
-                && (letter(end) || (matches!(chars[end].1, '\'' | '’' | '-') && letter(end + 1)))
+            while end < chars.len() && (letter(end) || (matches!(chars[end].1, '\'' | '’' | '-') && letter(end + 1)))
             {
                 end += 1;
             }
@@ -118,10 +115,7 @@ fn phrased(line: &str) -> Vec<(Range<usize>, usize)> {
                 phrase += 1;
             }
             paused = false;
-            words.push((
-                start..chars.get(end).map_or(line.len(), |(at, _)| *at),
-                phrase,
-            ));
+            words.push((start..chars.get(end).map_or(line.len(), |(at, _)| *at), phrase));
             at = end;
         } else {
             if !c.is_whitespace() {
@@ -140,8 +134,8 @@ fn words(line: &str, accent: Accent) -> Vec<Word<'_>> {
             let text = &line[bytes.clone()];
             // A word in capitals is letters said one by one (GPS, TV):
             // the table's sound for it isn't the word's.
-            let spelt_out = text.chars().filter(|c| c.is_alphabetic()).count() > 1
-                && !text.chars().any(char::is_lowercase);
+            let spelt_out =
+                text.chars().filter(|c| c.is_alphabetic()).count() > 1 && !text.chars().any(char::is_lowercase);
             Word {
                 text,
                 lower: text.to_lowercase().replace('’', "'"),
@@ -208,10 +202,7 @@ fn sound_before_last(ipa: &str) -> Option<char> {
 /// The IPA without its last sound.
 fn without_last(ipa: &str) -> &str {
     let trimmed = ipa.trim_end_matches(is_mark);
-    let cut = final_consonant(trimmed).map_or_else(
-        || trimmed.chars().last().map_or(0, char::len_utf8),
-        str::len,
-    );
+    let cut = final_consonant(trimmed).map_or_else(|| trimmed.chars().last().map_or(0, char::len_utf8), str::len);
     &trimmed[..trimmed.len() - cut]
 }
 
@@ -266,13 +257,10 @@ fn spellings(sound: &str) -> &'static [&'static str] {
 /// A consonant sound of the table's IPA as a name the spellings know.
 fn static_sound(sound: &str) -> &'static str {
     const KNOWN: [&str; 24] = [
-        "k", "t", "d", "s", "z", "l", "m", "n", "p", "b", "g", "f", "v", "θ", "ð", "ʃ", "tʃ", "dʒ",
-        "ʒ", "ŋ", "r", "w", "j", "h",
+        "k", "t", "d", "s", "z", "l", "m", "n", "p", "b", "g", "f", "v", "θ", "ð", "ʃ", "tʃ", "dʒ", "ʒ", "ŋ", "r", "w",
+        "j", "h",
     ];
-    KNOWN
-        .into_iter()
-        .find(|known| *known == sound)
-        .unwrap_or("")
+    KNOWN.into_iter().find(|known| *known == sound).unwrap_or("")
 }
 
 /// A consonant as it is written when it moves onto the next word.
@@ -308,9 +296,7 @@ fn written(sound: &str) -> &'static str {
 /// they plainly do; a silent e after it goes too (*like* → *li*).
 fn without_final<'a>(letters: &'a str, sound: &str) -> Option<&'a str> {
     let strip = |letters: &'a str| {
-        let spelling = spellings(sound)
-            .iter()
-            .find(|spelling| letters.ends_with(**spelling))?;
+        let spelling = spellings(sound).iter().find(|spelling| letters.ends_with(**spelling))?;
         let rest = &letters[..letters.len() - spelling.len()];
         (!rest.is_empty() && !rest.ends_with('-')).then_some(rest)
     };
@@ -342,8 +328,8 @@ fn link(chunk: &str, consonant: &str, moved: &str, next: &str) -> String {
 /// Words after which *going to* and the like are a place, not a verb to
 /// come: *going to the shop* isn't *gonna*.
 const NOT_A_VERB: [&str; 18] = [
-    "the", "a", "an", "my", "your", "his", "her", "its", "our", "their", "this", "that", "these",
-    "those", "school", "work", "bed", "church",
+    "the", "a", "an", "my", "your", "his", "her", "its", "our", "their", "this", "that", "these", "those", "school",
+    "work", "bed", "church",
 ];
 
 fn fusions(words: &[Word], accent: Accent, taken: &mut [bool], found: &mut Vec<Melt>) {
@@ -354,10 +340,7 @@ fn fusions(words: &[Word], accent: Accent, taken: &mut [bool], found: &mut Vec<M
             let parts: Vec<&str> = fusion.words.split(' ').collect();
             let end = at + parts.len();
             let these = words.get(at..end)?;
-            let same = these
-                .iter()
-                .zip(&parts)
-                .all(|(word, part)| word.lower == *part)
+            let same = these.iter().zip(&parts).all(|(word, part)| word.lower == *part)
                 && these.iter().all(|word| word.phrase == these[0].phrase);
             // *to* before a place or a name is going somewhere.
             let to_a_verb = parts.last() != Some(&"to")
@@ -425,9 +408,7 @@ fn joint(prev: &Word, next: &Word, accent: Accent) -> Option<Joint> {
     let before = sound_before_last(prev_ipa);
     let vowel_before = before.is_some_and(|c| is_vowel(c) || c == 'r');
 
-    if matches!(next.lower.as_str(), "you" | "your" | "you're")
-        && matches!(last, Some("t" | "d" | "s" | "z"))
-    {
+    if matches!(next.lower.as_str(), "you" | "your" | "you're") && matches!(last, Some("t" | "d" | "s" | "z")) {
         return Some(Joint::Yod);
     }
     if next.lower == "them" {
@@ -450,10 +431,7 @@ fn joint(prev: &Word, next: &Word, accent: Accent) -> Option<Joint> {
         if accent == Accent::Gb && last.is_none() {
             let spelt_r = prev.lower.ends_with('r') || prev.lower.ends_with("re");
             let open = last_sound(prev_ipa).is_some_and(|c| matches!(c, 'ə' | 'ɑ' | 'ɔ' | 'ɜ'));
-            let small = connected_speech()
-                .weak_forms
-                .iter()
-                .any(|form| form.word == prev.lower);
+            let small = connected_speech().weak_forms.iter().any(|form| form.word == prev.lower);
             if spelt_r || (open && !small) {
                 return Some(Joint::Link {
                     rule: "linking-r",
@@ -564,9 +542,7 @@ fn joints(words: &[Word], accent: Accent, taken: &[bool], found: &mut Vec<Melt>)
                         // The glide starts the next syllable, after its stress mark.
                         let glide = if glide == "y" { "j" } else { "w" };
                         let (stress, rest) = match next_ipa.chars().next() {
-                            Some(mark @ ('ˈ' | 'ˌ')) => {
-                                (mark.to_string(), &next_ipa[mark.len_utf8()..])
-                            }
+                            Some(mark @ ('ˈ' | 'ˌ')) => (mark.to_string(), &next_ipa[mark.len_utf8()..]),
                             _ => (String::new(), next_ipa),
                         };
                         format!("{}‿{stress}{glide}{rest}", melt.ipa)
@@ -592,14 +568,7 @@ fn joints(words: &[Word], accent: Accent, taken: &[bool], found: &mut Vec<Melt>)
 }
 
 /// A joint's melt, other than a link.
-fn joined(
-    prev: &Word,
-    next: &Word,
-    prev_ipa: &str,
-    next_ipa: &str,
-    joint: Joint,
-    accent: Accent,
-) -> Option<Melt> {
+fn joined(prev: &Word, next: &Word, prev_ipa: &str, next_ipa: &str, joint: Joint, accent: Accent) -> Option<Melt> {
     let last = final_consonant(prev_ipa);
     // Its words are the joint's, set by the caller.
     let melt = |rule: &'static str, sound: String, ipa: String| Melt {
@@ -622,10 +591,7 @@ fn joined(
             let (tail, tail_ipa) = match (next.lower.as_str(), last) {
                 ("you", "t" | "d") => ("a", "ə".to_owned()),
                 ("you", _) => ("oo", "uː".to_owned()),
-                _ => (
-                    "er",
-                    if accent == Accent::Us { "ɚ" } else { "ə" }.to_owned(),
-                ),
+                _ => ("er", if accent == Accent::Us { "ɚ" } else { "ə" }.to_owned()),
             };
             Some(melt(
                 "yod",
@@ -684,16 +650,10 @@ fn cut_off_t(word: &Word, next: Option<(&Word, &str)>) -> Option<Melt> {
     if final_consonant(ipa) != Some("t") || !sound_before_last(ipa).is_some_and(is_vowel) {
         return None;
     }
-    let letters = word
-        .lower
-        .strip_suffix("tt")
-        .or_else(|| word.lower.strip_suffix('t'))?;
+    let letters = word.lower.strip_suffix("tt").or_else(|| word.lower.strip_suffix('t'))?;
     let (sound, glottal) = (format!("{letters}'"), format!("{}ʔ", without_last(ipa)));
     let (sound, ipa) = match next {
-        Some((next, next_ipa)) => (
-            format!("{sound} {}", next.lower),
-            format!("{glottal} {next_ipa}"),
-        ),
+        Some((next, next_ipa)) => (format!("{sound} {}", next.lower), format!("{glottal} {next_ipa}")),
         None => (sound, glottal),
     };
     Some(Melt {
@@ -707,9 +667,9 @@ fn cut_off_t(word: &Word, next: Option<(&Word, &str)>) -> Option<Melt> {
 
 /// Whether the word's -ing is said -in': one of two syllables or more.
 fn says_in(word: &Word) -> bool {
-    word.ipa.as_deref().is_some_and(|ipa| {
-        word.lower.ends_with("ing") && ipa.ends_with("ɪŋ") && syllables(ipa) >= 2
-    })
+    word.ipa
+        .as_deref()
+        .is_some_and(|ipa| word.lower.ends_with("ing") && ipa.ends_with("ɪŋ") && syllables(ipa) >= 2)
 }
 
 /// -ing said -in'.
@@ -748,8 +708,8 @@ fn soft_t_inside(word: &Word) -> Option<Melt> {
         word.lower.replacen("tt", "dd", 1)
     } else {
         let chars: Vec<char> = word.lower.chars().collect();
-        let t = (1..chars.len().saturating_sub(1))
-            .find(|&at| chars[at] == 't' && "aeiouylr".contains(chars[at + 1]))?;
+        let t =
+            (1..chars.len().saturating_sub(1)).find(|&at| chars[at] == 't' && "aeiouylr".contains(chars[at + 1]))?;
         chars
             .iter()
             .enumerate()

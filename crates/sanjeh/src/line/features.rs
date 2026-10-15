@@ -57,7 +57,17 @@ pub struct Facts {
 }
 
 /// Melts that hide a word from the ear, rather than only joining two.
-const EAR_MELTS: &[&str] = &["fusion", "yod", "flap-t", "elision", "h-dropping", "them", "assimilation", "glottal-t", "g-dropping"];
+const EAR_MELTS: &[&str] = &[
+    "fusion",
+    "yod",
+    "flap-t",
+    "elision",
+    "h-dropping",
+    "them",
+    "assimilation",
+    "glottal-t",
+    "g-dropping",
+];
 
 /// Words said for sound or for time, not for their meaning: never graded.
 const FILLERS: &[&str] = &[
@@ -66,23 +76,61 @@ const FILLERS: &[&str] = &[
 
 /// Everyday frames a learner can reuse.
 const FRAMES: &[&str] = &[
-    "can i", "could you", "can you", "would you", "do you want", "i'm going to", "i'm gonna", "let's",
-    "i don't know", "i think", "what are you", "what do you", "how do you", "i need", "i want", "you have to",
-    "you know what", "why don't", "there's no", "i can't", "i was just", "it's not", "i didn't", "are you", "is it",
-    "don't", "i'll",
+    "can i",
+    "could you",
+    "can you",
+    "would you",
+    "do you want",
+    "i'm going to",
+    "i'm gonna",
+    "let's",
+    "i don't know",
+    "i think",
+    "what are you",
+    "what do you",
+    "how do you",
+    "i need",
+    "i want",
+    "you have to",
+    "you know what",
+    "why don't",
+    "there's no",
+    "i can't",
+    "i was just",
+    "it's not",
+    "i didn't",
+    "are you",
+    "is it",
+    "don't",
+    "i'll",
 ];
 
 /// The short forms a contraction stands for.
 fn expand(token: &str) -> Vec<String> {
     let special: &[(&str, &[&str])] = &[
-        ("won't", &["will", "not"]), ("can't", &["can", "not"]), ("shan't", &["shall", "not"]),
-        ("ain't", &["am", "not"]), ("gonna", &["going", "to"]), ("wanna", &["want", "to"]),
-        ("gotta", &["got", "to"]), ("y'all", &["you", "all"]), ("let's", &["let", "us"]), ("c'mon", &["come", "on"]),
+        ("won't", &["will", "not"]),
+        ("can't", &["can", "not"]),
+        ("shan't", &["shall", "not"]),
+        ("ain't", &["am", "not"]),
+        ("gonna", &["going", "to"]),
+        ("wanna", &["want", "to"]),
+        ("gotta", &["got", "to"]),
+        ("y'all", &["you", "all"]),
+        ("let's", &["let", "us"]),
+        ("c'mon", &["come", "on"]),
     ];
     if let Some((_, full)) = special.iter().find(|(form, _)| *form == token) {
         return full.iter().map(|w| w.to_string()).collect();
     }
-    for (short, full) in [("n't", "not"), ("'re", "are"), ("'m", "am"), ("'ll", "will"), ("'ve", "have"), ("'d", "would"), ("'s", "is")] {
+    for (short, full) in [
+        ("n't", "not"),
+        ("'re", "are"),
+        ("'m", "am"),
+        ("'ll", "will"),
+        ("'ve", "have"),
+        ("'d", "would"),
+        ("'s", "is"),
+    ] {
         if let Some(stem) = token.strip_suffix(short).filter(|stem| !stem.is_empty()) {
             return vec![stem.to_string(), full.to_string()];
         }
@@ -132,7 +180,10 @@ fn w_readings(word: &str) -> Vec<String> {
     let parts: Vec<&str> = word.split('w').collect();
     let mut out = vec![parts[0].to_string()];
     for part in &parts[1..] {
-        out = out.iter().flat_map(|head| ["w", "r", "l", "ll"].map(|c| format!("{head}{c}{part}"))).collect();
+        out = out
+            .iter()
+            .flat_map(|head| ["w", "r", "l", "ll"].map(|c| format!("{head}{c}{part}")))
+            .collect();
     }
     out
 }
@@ -152,7 +203,11 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
     if sound.contains('w') {
         found.push("w".to_string());
     }
-    let tail = sound.chars().rev().take_while(|c| !IPA_VOWELS.contains(*c) && *c != 'ː').count();
+    let tail = sound
+        .chars()
+        .rev()
+        .take_while(|c| !IPA_VOWELS.contains(*c) && *c != 'ː')
+        .count();
     if tail >= 3 {
         found.push("end-cluster".to_string());
     }
@@ -164,7 +219,10 @@ pub fn facts(input: &LineInput) -> Facts {
     let text = input.text.trim();
     let accent = input.accent;
     let ranges = line_words(text);
-    let tokens: Vec<String> = ranges.iter().map(|r| text[r.clone()].to_lowercase().replace('’', "'")).collect();
+    let tokens: Vec<String> = ranges
+        .iter()
+        .map(|r| text[r.clone()].to_lowercase().replace('’', "'"))
+        .collect();
     let known_names: Vec<String> = input.names.iter().map(|n| n.to_lowercase()).collect();
 
     // A name: a word with a capital where no sentence starts, a word known
@@ -187,7 +245,9 @@ pub fn facts(input: &LineInput) -> Facts {
                 && !known(t, accent)
                 && word_level(t).is_none()
                 && (1..=3).contains(&t.matches('w').count())
-                && w_readings(t).iter().any(|r| known(r, accent) || word_level(r).is_some())
+                && w_readings(t)
+                    .iter()
+                    .any(|r| known(r, accent) || word_level(r).is_some())
         })
         .map(|(_, t)| t.clone())
         .collect();
@@ -201,7 +261,12 @@ pub fn facts(input: &LineInput) -> Facts {
                     || (!known(t, accent) && word_level(t).is_none() && !t.chars().all(|c| c.is_ascii_digit())))
         })
         .collect();
-    let names: Vec<String> = tokens.iter().zip(&is_name).filter(|(_, n)| **n).map(|(t, _)| t.clone()).collect();
+    let names: Vec<String> = tokens
+        .iter()
+        .zip(&is_name)
+        .filter(|(_, n)| **n)
+        .map(|(t, _)| t.clone())
+        .collect();
 
     // Words and their levels.
     let teaches: Vec<Entry> = input.entries.iter().filter(|e| e.learnt()).cloned().collect();
@@ -224,7 +289,11 @@ pub fn facts(input: &LineInput) -> Facts {
             }
         }
     }
-    let common = if levels.is_empty() { 1.0 } else { levels.iter().filter(|(l, _)| *l <= 3.0).count() as f64 / levels.len() as f64 };
+    let common = if levels.is_empty() {
+        1.0
+    } else {
+        levels.iter().filter(|(l, _)| *l <= 3.0).count() as f64 / levels.len() as f64
+    };
     for entry in &teaches {
         if let Some(level) = entry.level {
             levels.push((level.rank(), entry.term.clone()));
@@ -245,12 +314,22 @@ pub fn facts(input: &LineInput) -> Facts {
         .filter_map(|m| {
             let first = ranges.get(m.words.start)?;
             let last = ranges.get(m.words.end.checked_sub(1)?)?;
-            Some((m.rule.to_string(), text[first.start..last.end].to_string(), m.sound.clone()))
+            Some((
+                m.rule.to_string(),
+                text[first.start..last.end].to_string(),
+                m.sound.clone(),
+            ))
         })
         .collect();
     let written: Vec<(String, String)> = tokens
         .iter()
-        .filter_map(|t| connected_speech().fusions.iter().find(|f| f.sound == *t).map(|f| (t.clone(), f.words.clone())))
+        .filter_map(|t| {
+            connected_speech()
+                .fusions
+                .iter()
+                .find(|f| f.sound == *t)
+                .map(|f| (t.clone(), f.words.clone()))
+        })
         .collect();
     let hard_sounds: Vec<(String, String)> = tokens
         .iter()
@@ -258,19 +337,30 @@ pub fn facts(input: &LineInput) -> Facts {
         .filter(|(at, _)| !is_name[*at])
         .flat_map(|(_, t)| hard_sounds_of(t, accent).into_iter().map(move |s| (s, t.clone())))
         .collect();
-    let ear_melts = melt_list.iter().filter(|(rule, _, _)| EAR_MELTS.contains(&rule.as_str())).count() + written.len();
+    let ear_melts = melt_list
+        .iter()
+        .filter(|(rule, _, _)| EAR_MELTS.contains(&rule.as_str()))
+        .count()
+        + written.len();
 
-    let hearing = input.heard.as_ref().map(|heard| hearing(&tokens, |at| is_name[at], heard));
+    let hearing = input
+        .heard
+        .as_ref()
+        .map(|heard| hearing(&tokens, |at| is_name[at], heard));
 
     let lower = text.to_lowercase().replace('’', "'");
     let lower = lower.trim_start_matches(['"', '“']);
     let frame = FRAMES.iter().any(|f| {
-        lower.strip_prefix(f).is_some_and(|rest| rest.is_empty() || !rest.starts_with(char::is_alphanumeric))
+        lower
+            .strip_prefix(f)
+            .is_some_and(|rest| rest.is_empty() || !rest.starts_with(char::is_alphanumeric))
     });
     let end = text.trim_end_matches(['"', '”']);
     let question = end.ends_with('?');
     let exclaim = end.ends_with('!');
-    let whole_sentence = text.trim_start_matches(['"', '“']).starts_with(|c: char| c.is_uppercase() || c.is_ascii_digit())
+    let whole_sentence = text
+        .trim_start_matches(['"', '“'])
+        .starts_with(|c: char| c.is_uppercase() || c.is_ascii_digit())
         && (end.ends_with(['.', '?', '!']))
         && !end.ends_with("...")
         && !end.ends_with('…')
@@ -278,7 +368,9 @@ pub fn facts(input: &LineInput) -> Facts {
     let sentences = {
         let chars: Vec<char> = text.chars().collect();
         (0..chars.len())
-            .filter(|&i| ".?!".contains(chars[i]) && chars.get(i + 1).is_none_or(|c| c.is_whitespace() || "\"”".contains(*c)))
+            .filter(|&i| {
+                ".?!".contains(chars[i]) && chars.get(i + 1).is_none_or(|c| c.is_whitespace() || "\"”".contains(*c))
+            })
             .count()
             .max(1)
     };
@@ -297,9 +389,15 @@ pub fn facts(input: &LineInput) -> Facts {
     set("names", names.len() as f64);
     set("ear_melts", ear_melts as f64);
     set("melts", melt_list.len() as f64);
-    set("weak_forms", melt_list.iter().filter(|(r, _, _)| r == "weak-form").count() as f64);
+    set(
+        "weak_forms",
+        melt_list.iter().filter(|(r, _, _)| r == "weak-form").count() as f64,
+    );
     set("hard_sounds", hard_sounds.len() as f64);
-    set("contractions", tokens.iter().filter(|t| t.contains('\'')).count() as f64);
+    set(
+        "contractions",
+        tokens.iter().filter(|t| t.contains('\'')).count() as f64,
+    );
     set("question", f64::from(u8::from(question)));
     set("exclaim", f64::from(u8::from(exclaim)));
     set("formula", f64::from(u8::from(frame)));
@@ -343,10 +441,14 @@ impl Facts {
             why.push(WhyNot::TwoVoices);
         }
         if self.names.len() > 1 {
-            why.push(WhyNot::Names { words: self.names.clone() });
+            why.push(WhyNot::Names {
+                words: self.names.clone(),
+            });
         }
         if !self.said_wrong.is_empty() {
-            why.push(WhyNot::SaidWrong { words: self.said_wrong.clone() });
+            why.push(WhyNot::SaidWrong {
+                words: self.said_wrong.clone(),
+            });
         }
         if self.hearing.as_ref().is_some_and(|h| h.miss_small >= 0.3) {
             why.push(WhyNot::NotClear);
@@ -377,12 +479,19 @@ impl Facts {
             syllables: self.syllables,
         }];
         for (word, full) in &self.written {
-            out.push(Reason::Written { word: word.clone(), full: full.clone() });
+            out.push(Reason::Written {
+                word: word.clone(),
+                full: full.clone(),
+            });
         }
         for (rule, text, sound) in &self.melts {
             let ear_rule = EAR_MELTS.contains(&rule.as_str());
             if skill == Skill::Mouth || ear_rule {
-                out.push(Reason::Melt { rule: rule.clone(), text: text.clone(), sound: sound.clone() });
+                out.push(Reason::Melt {
+                    rule: rule.clone(),
+                    text: text.clone(),
+                    sound: sound.clone(),
+                });
             }
         }
         if skill == Skill::Ear {
@@ -390,7 +499,12 @@ impl Facts {
                 for w in &h.words {
                     let missed = !w.base || !w.small || (!w.tiny && w.p.is_some_and(|p| p < 0.6));
                     let unsure = w.small && w.p.is_some_and(|p| p < 0.5);
-                    if w.kind == WordKind::Word && (missed || unsure) && !out.iter().any(|r| matches!(r, Reason::WeakEar { word } if *word == w.word)) {
+                    if w.kind == WordKind::Word
+                        && (missed || unsure)
+                        && !out
+                            .iter()
+                            .any(|r| matches!(r, Reason::WeakEar { word } if *word == w.word))
+                    {
                         out.push(Reason::WeakEar { word: w.word.clone() });
                     }
                 }
@@ -398,18 +512,31 @@ impl Facts {
         }
         if skill == Skill::Mouth {
             for (sound, word) in &self.hard_sounds {
-                out.push(Reason::HardSound { sound: sound.clone(), word: word.clone() });
+                out.push(Reason::HardSound {
+                    sound: sound.clone(),
+                    word: word.clone(),
+                });
             }
         }
         for (word, level) in &self.hard_words {
-            out.push(Reason::HardWord { word: word.clone(), level: *level });
+            out.push(Reason::HardWord {
+                word: word.clone(),
+                level: *level,
+            });
         }
         for entry in &self.teaches {
-            out.push(Reason::Teaches { term: entry.term.clone(), kind: entry.kind.clone() });
+            out.push(Reason::Teaches {
+                term: entry.term.clone(),
+                kind: entry.kind.clone(),
+            });
         }
-        out.push(Reason::Everyday { share: (self.common * 100.0).round() / 100.0 });
+        out.push(Reason::Everyday {
+            share: (self.common * 100.0).round() / 100.0,
+        });
         if skill == Skill::Mouth && (self.question || self.exclaim) {
-            out.push(Reason::Tune { question: self.question });
+            out.push(Reason::Tune {
+                question: self.question,
+            });
         }
         out
     }
