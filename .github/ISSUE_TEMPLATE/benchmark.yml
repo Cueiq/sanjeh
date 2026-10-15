@@ -1,0 +1,27 @@
+name: A benchmark or data set
+description: Propose data to judge a measure on, or to build one from.
+labels: ["benchmark"]
+body:
+  - type: textarea
+    id: data
+    attributes:
+      label: The data
+      description: What it is, how much of it, and a link.
+    validations:
+      required: true
+  - type: input
+    id: licence
+    attributes:
+      label: Its licence
+      description: Public benchmarks hold only openly licensed text and audio.
+    validations:
+      required: true
+  - type: textarea
+    id: labels
+    attributes:
+      label: Labels
+      description: What is labelled, by whom (their levels and first languages), and how.
+  - type: textarea
+    id: measure
+    attributes:
+      label: Which measure it would judge

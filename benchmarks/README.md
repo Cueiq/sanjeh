@@ -46,6 +46,7 @@ cargo run -q --bin sanjeh -- line bench <items.jsonl> --model models/line/<name>
 
 | Set | Lines | Raters | Levels | Shared |
 |---|---|---|---|---|
+| `example` | 12 written for this repository | 1, invented (B1) | — | yes: **not a benchmark**, for trying the tools |
 | `private/stuart` | 104 (fit 60, test 44) from *Stuart Fails to Save the Universe*, episodes 1–2 and 6 (6 rated blind) | 1 (B2, knew episodes 1–2 well) | B2 | **no**: the lines and audio are the show's |
 
 Public sets, from openly licensed audio (Common Voice, Tatoeba) and raters at

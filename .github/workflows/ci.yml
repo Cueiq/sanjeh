@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - name: The tools run end to end on the example set
+        run: |
+          cargo sanjeh line bench benchmarks/example/items.jsonl --split all
+          echo '{"text": "Can I get a coffee, please?", "duration_ms": 1500}' | cargo sanjeh line measure -
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: A model can be fitted and benched
+        run: |
+          python -m pip install -r tools/requirements.txt
+          cargo sanjeh line features benchmarks/example/items.jsonl > "$RUNNER_TEMP/features.jsonl"
+          python tools/fit_line.py "$RUNNER_TEMP/features.jsonl" "$RUNNER_TEMP/model.json" --name ci
+          cargo sanjeh line bench benchmarks/example/items.jsonl --model "$RUNNER_TEMP/model.json" --split all

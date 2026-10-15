@@ -1,0 +1,22 @@
+name: An idea for a measure or a feature
+description: Something Sanjeh could measure, or a feature that would make a measure better.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What it would measure, or add
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it would help learners
+      description: Research, teaching experience, or examples of where today's measure goes wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: judged
+    attributes:
+      label: How we would know it works
+      description: Which benchmark would show it, or what data would be needed.

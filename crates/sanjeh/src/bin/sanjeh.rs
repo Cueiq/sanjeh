@@ -1,13 +1,14 @@
 //! `sanjeh`, the measures from the command line.
 //!
 //! ```text
-//! sanjeh line features <items.jsonl>                 each item's features, for fitting a model
-//! sanjeh line measure  <items.jsonl> --model <file>  each item measured
-//! sanjeh line bench    <items.jsonl> --model <file> [--split test]
+//! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
+//! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
+//! sanjeh line bench    <items.jsonl> [--model <file>] [--split fit|test|all]
 //! ```
 //!
 //! An items file is a benchmark (`sanjeh::bench`); `measure` also takes
-//! bare line inputs, one a line.
+//! bare line inputs, one a line. `-` reads standard input. Without
+//! `--model`, the default model (`sanjeh::line::default_model`).
 
 use std::process::ExitCode;
 
@@ -32,8 +33,18 @@ fn option<'a>(args: &'a [String], name: &str) -> Option<&'a str> {
         .map(String::as_str)
 }
 
+/// A file's text, or standard input's for `-`.
+fn read_text(path: &str) -> Result<String, String> {
+    if path == "-" {
+        let mut text = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut text).map_err(|e| format!("standard input: {e}"))?;
+        return Ok(text);
+    }
+    std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))
+}
+
 fn read_items(path: &str) -> Result<Vec<Item>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let text = read_text(path)?;
     text.lines()
         .filter(|l| !l.trim().is_empty())
         .enumerate()
@@ -41,14 +52,17 @@ fn read_items(path: &str) -> Result<Vec<Item>, String> {
         .collect()
 }
 
+/// The model `--model` names, or the default.
 fn read_model(args: &[String]) -> Result<LineModel, String> {
-    let path = option(args, "--model").ok_or("--model <file> is needed")?;
+    let Some(path) = option(args, "--model") else {
+        return Ok(sanjeh::line::default_model().clone());
+    };
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     LineModel::from_json(&text).map_err(|e| format!("{path}: {e}"))
 }
 
 fn run(args: &[String]) -> Result<(), String> {
-    let usage = "usage: sanjeh line (features|measure|bench) <items.jsonl> [--model <file>] [--split fit|test]";
+    let usage = "usage: sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
     let (Some("line"), Some(command), Some(path)) = (
         args.first().map(String::as_str),
         args.get(1).map(String::as_str),
@@ -70,7 +84,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         "measure" => {
             let model = read_model(args)?;
-            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+            let text = read_text(path)?;
             for line in text.lines().filter(|l| !l.trim().is_empty()) {
                 let input: LineInput = serde_json::from_str::<Item>(line)
                     .map(|item| item.input)

@@ -1,0 +1,37 @@
+name: A measure is wrong
+description: Sanjeh measured something wrongly — a line too easy or too hard, a melt missed, a word at the wrong level, a sound wrong.
+labels: ["measure"]
+body:
+  - type: input
+    id: measure
+    attributes:
+      label: Which measure
+      placeholder: line, levels, connected, pronounce…
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: The input
+      description: The line, word or phrase, and for a line its duration and accent. JSON as `sanjeh line measure` takes it is ideal.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What Sanjeh said
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and why
+      description: Your reasoning, a dictionary or study that says so, how learners at some level find it.
+    validations:
+      required: true
+  - type: input
+    id: level
+    attributes:
+      label: Your own level of English, if you're judging as a learner
+      placeholder: A2, B1, C1, native…
