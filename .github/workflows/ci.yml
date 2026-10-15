@@ -9,7 +9,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -21,7 +21,7 @@ jobs:
         run: |
           cargo sanjeh line bench benchmarks/example/items.jsonl --split all
           echo '{"text": "Can I get a coffee, please?", "duration_ms": 1500}' | cargo sanjeh line measure -
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: A model can be fitted and benched
