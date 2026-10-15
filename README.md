@@ -25,9 +25,6 @@ So every measure comes with **benchmarks**, and anyone can improve it:
   how many items at each level). Results are reported **per level**, so a
   change that helps B2 learners but hurts A1 learners shows.
 
-Sanjeh began inside [Bembegoo](https://github.com/its-saeed/bembegoo), an app
-for learning English from films, which uses it.
-
 ## Data
 
 | File | Source | Licence |
