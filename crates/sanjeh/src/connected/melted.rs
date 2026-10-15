@@ -1,8 +1,8 @@
 //! A line as it is said: its melts drawn together into the stretches the
 //! learner reads — *thi-sis thuh story-yuv two girls who sha-ruh fla-tin
-//! London*. Melts
-//! over the same word are one stretch: a weak *of* inside the link of
-//! *story of*, the dropped d of *and shine* after the link of *rise and*.
+//! London*. Melts over the same word are one stretch: a weak *of* inside the
+//! link of *story of*, the dropped d of *and shine* after the link of *rise
+//! and*.
 
 use std::ops::Range;
 
