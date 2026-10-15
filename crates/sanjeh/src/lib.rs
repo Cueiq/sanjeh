@@ -4,7 +4,10 @@
 //! how much it is worth practising. Each measure has a benchmark beside it,
 //! so it can be improved by anyone, at every level from A1 to C2.
 
+pub mod bench;
 pub mod connected;
+pub mod levels;
+pub mod line;
 mod pronounce;
 pub use pronounce::{Accent, Pronounced, pronounce, warm_pronouncing};
 

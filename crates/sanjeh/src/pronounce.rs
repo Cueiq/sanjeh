@@ -17,7 +17,7 @@ use crate::term_key;
 const TABLE: &[u8] = include_bytes!("../../../data/pronouncing/pronouncing.tsv.gz");
 
 /// The accent a sound is written in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Accent {
     Us,
