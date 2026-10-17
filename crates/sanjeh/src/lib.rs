@@ -18,6 +18,10 @@ pub const CONNECTED_SPEECH_JSON: &str = include_str!("../../../data/connected-sp
 /// The notices the pronouncing table's sources ask to be shipped with it.
 pub const PRONOUNCING_NOTICE: &str = include_str!("../../../data/pronouncing/NOTICE.md");
 
+/// The notices the word level lists' sources ask to be shipped with them:
+/// an app that measures lines (`line`) or words (`levels`) carries them.
+pub const LEVELS_NOTICE: &str = include_str!("../../../data/levels/NOTICE.md");
+
 use unicode_normalization::UnicodeNormalization;
 
 /// What parts an English term's words: the ASCII spaces and controls, NEL,
