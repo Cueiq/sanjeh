@@ -27,6 +27,8 @@ use sanjeh::levels::word_level;
 use sanjeh::line::{LineInput, LineModel, Reason, Skill, SkillMeasure, WhyNot, facts, measure};
 use sanjeh::{Accent, Pronounced, pronounce, readings};
 
+pub const LEVELS_NOTICE: &str = include_str!("../../../../data/levels/NOTICE.md");
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match run(&args) {
@@ -161,9 +163,9 @@ fn run(args: &[String]) -> Result<(), String> {
             return Ok(());
         }
         Some("melts") => {
+            // where its words melt, and the line as said
             let text = text_of(args);
             let found = melts(&text, accent_of(args));
-            // The line with each melted stretch as it is said; spans count UTF-16 units.
             let units: Vec<u16> = text.encode_utf16().collect();
             let mut said = String::new();
             let mut at = 0;
@@ -267,7 +269,7 @@ fn run(args: &[String]) -> Result<(), String> {
             let kinds = option(args, "--kind")
                 .map(|kinds| {
                     kinds
-                        .split(',')
+                        .split(&[','])
                         .map(|kind| AlikeKind::parse(kind).ok_or(format!("--kind {kind}: same, ending or near")))
                         .collect::<Result<Vec<_>, _>>()
                 })
