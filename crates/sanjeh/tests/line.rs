@@ -15,7 +15,7 @@ pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
 
     let text = input.text.trim();
     let parts: Vec<&str> = text
-        .split(|c| c == '-' || c == '—')
+        .split(['-', '—'])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();

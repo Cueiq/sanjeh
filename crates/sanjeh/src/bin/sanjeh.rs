@@ -163,6 +163,7 @@ fn run(args: &[String]) -> Result<(), String> {
         Some("melts") => {
             let text = text_of(args);
             let found = melts(&text, accent_of(args));
+            // The line with each melted stretch as it is said; spans count UTF-16 units.
             let units: Vec<u16> = text.encode_utf16().collect();
             let mut said = String::new();
             let mut at = 0;
@@ -256,6 +257,60 @@ fn run(args: &[String]) -> Result<(), String> {
                 }
                 return Ok(());
             }
+        }
+        Some("alike") => {
+            let word = text_of(args);
+            let level = match option(args, "--level") {
+                Some(level) => Some(Level::parse(level).ok_or(format!("--level {level}: one of A1 to C2"))?),
+                None => None,
+            };
+            let kinds = option(args, "--kind")
+                .map(|kinds| {
+                    kinds
+                        .split(',')
+                        .map(|kind| AlikeKind::parse(kind).ok_or(format!("--kind {kind}: same, ending or near")))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?
+                .unwrap_or_default();
+            let most = match option(args, "--most") {
+                Some(most) => most.parse().map_err(|_| format!("--most {most}: a number"))?,
+                None => 10,
+            };
+            let accent = if args.iter().any(|a| a == "--gb") {
+                Some(Accent::Gb)
+            } else if args.iter().any(|a| a == "--us") {
+                Some(Accent::Us)
+            } else {
+                None
+            };
+            let language = option(args, "--language").map(str::to_lowercase);
+            if let Some(language) = &language
+                && !languages().contains(&language.as_str())
+            {
+                return Err(format!("--language {language}: one of {}", languages().join(", ")));
+            }
+            let found = alikes(
+                &word,
+                &AlikeOptions {
+                    accent,
+                    level,
+                    kinds,
+                    most,
+                    language,
+                },
+            );
+            if found.is_empty() {
+                println!("none");
+            }
+            for alike in found {
+                let kind = format!("{:?}", alike.kind).to_lowercase();
+                println!(
+                    "{:<12} {kind:<7} {:.2}  {:<12} {}",
+                    alike.word, alike.distance, alike.sound, alike.why
+                );
+            }
+            return Ok(());
         }
         Some("level") => {
             for word in args.iter().skip(1) {
