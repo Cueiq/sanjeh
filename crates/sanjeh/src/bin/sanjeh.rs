@@ -263,7 +263,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         _ => {}
     }
-    let usage = "usage: sanjeh (pronounce | melts | level) …, or sanjeh line (features|measure|bench|hear) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
+    let usage = "usage: sanjeh (pronounce | melts | level | alike) …, or sanjeh line (features|measure|bench|hear) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
     let (Some("line"), Some(command), Some(path)) = (
         args.first().map(String::as_str),
         args.get(1).map(String::as_str),
