@@ -52,6 +52,7 @@ pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
 
     outputs
 }
+
 #[test]
 fn a_cut_off_line_or_two_voices_cant_be_practised() {
     let cut = facts(&line("This is the best thing I've ever put in my mouth...", 3000));

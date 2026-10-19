@@ -7,6 +7,7 @@
 pub mod alike;
 pub mod bench;
 pub mod connected;
+#[cfg(feature = "hear")]
 pub mod hear;
 pub mod levels;
 pub mod line;

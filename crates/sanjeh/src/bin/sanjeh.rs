@@ -205,7 +205,7 @@ fn run(args: &[String]) -> Result<(), String> {
 
             #[cfg(feature = "hear")]
             {
-                let model = option(args, "--model").unwrap_or("models/tiny.en.bin");
+                let model_path = option(args, "--model").unwrap_or("models/tiny.en.bin");
 
                 let mut clips = vec![];
                 let mut iter = args.iter().skip(2);
@@ -221,7 +221,9 @@ fn run(args: &[String]) -> Result<(), String> {
                     return Err("usage: sanjeh line hear <clips.wav...> [--model <file>]".into());
                 }
 
-                println!("Loading Whisper model from: {}", model);
+                println!("Loading Whisper model from: {}", model_path);
+                let model = sanjeh::hear::WhisperModel::load(model_path)?;
+
                 for clip_path in clips {
                     println!("\nProcessing clip: {}", clip_path);
 
@@ -247,7 +249,7 @@ fn run(args: &[String]) -> Result<(), String> {
                         reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect()
                     };
 
-                    match sanjeh::hear::run_whisper_on_clip(&samples, model) {
+                    match model.transcribe(&samples) {
                         Ok(words) => {
                             println!("Heard {} words:", words.len());
                             for w in words {
