@@ -1,0 +1,18 @@
+# What a Persian speaker learning English is likelier to hear one sound for
+# another, as costs that replace the general ones when lower (see README.md).
+# kind	a	b	cost	evidence	source
+swap	w	v	0.2	inventory	majidi-ternes-1991
+swap	θ	t	0.25	inventory	majidi-ternes-1991
+swap	θ	s	0.25	inventory	majidi-ternes-1991
+swap	ð	d	0.25	inventory	majidi-ternes-1991
+swap	ð	z	0.25	inventory	majidi-ternes-1991
+swap	ŋ	n	0.25	inventory	majidi-ternes-1991
+swap	iː	ɪ	0.1	perception	afshar-2022
+swap	i	ɪ	0.1	perception	afshar-2022
+swap	uː	ʊ	0.1	perception	afshar-2022
+swap	u	ʊ	0.1	perception	afshar-2022
+swap	ʌ	ɑː	0.2	perception	afshar-2022
+swap	ʌ	ɑ	0.2	perception	afshar-2022
+swap	ʌ	ɔː	0.25	perception	afshar-2022
+swap	ʌ	ɒ	0.25	perception	afshar-2022
+cluster-end	-	-	0.25	syllables	hall-thesis

@@ -4,7 +4,7 @@
 //! sanjeh pronounce [--gb] <word or phrase>             its sound in IPA, American or British
 //! sanjeh melts [--gb] <line>                           where its words melt, and the line as said
 //! sanjeh level <word>…                                 each word's CEFR level, by the open lists
-//! sanjeh alike [--us|--gb] [--level <A1…C2>] [--kind same,ending,near] [--most <n>] <word>
+//! sanjeh alike [--us|--gb] [--level <A1…C2>] [--language fa] [--kind same,ending,near] [--most <n>] <word>
 //!                                                      the known words that sound like it
 //! sanjeh line show [--gb] --ms <duration> <line>      a line measured, in plain words
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
@@ -18,7 +18,7 @@
 
 use std::process::ExitCode;
 
-use sanjeh::alike::{AlikeKind, AlikeOptions, alikes};
+use sanjeh::alike::{AlikeKind, AlikeOptions, alikes, languages};
 use sanjeh::bench::{Item, report};
 use sanjeh::connected::{melted, melts};
 use sanjeh::levels::Level;
@@ -78,7 +78,7 @@ fn text_of(args: &[String]) -> String {
     let mut rest = args.iter().skip(1);
     while let Some(arg) = rest.next() {
         match arg.as_str() {
-            "--ms" | "--model" | "--level" | "--kind" | "--most" => {
+            "--ms" | "--model" | "--level" | "--kind" | "--most" | "--language" => {
                 rest.next();
             }
             flag if flag.starts_with("--") => {}
@@ -222,6 +222,12 @@ fn run(args: &[String]) -> Result<(), String> {
             } else {
                 None
             };
+            let language = option(args, "--language").map(str::to_lowercase);
+            if let Some(language) = &language
+                && !languages().contains(&language.as_str())
+            {
+                return Err(format!("--language {language}: one of {}", languages().join(", ")));
+            }
             let found = alikes(
                 &word,
                 &AlikeOptions {
@@ -229,6 +235,7 @@ fn run(args: &[String]) -> Result<(), String> {
                     level,
                     kinds,
                     most,
+                    language,
                 },
             );
             if found.is_empty() {

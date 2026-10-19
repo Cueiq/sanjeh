@@ -152,9 +152,25 @@ wouldn't     ending  1.25  ˈwʊdənt      + /ə/, + /n/, + /t/
 ```
 
 Three kinds: `same` (*to*, *two*), `ending` (*use*, *used*; *would*,
-*would've*) and `near` (*think*, *sink*). Still to come: the swaps a
-learner's first language makes likelier, as a table per language, and a
-benchmark of real mishearings to tune the costs against.
+*would've*) and `near` (*think*, *sink*).
+
+A learner's first language makes some changes likelier: a sound it lacks is
+heard as the nearest one it has. `--language` takes a table of lower costs
+for those, each row with its evidence and source
+([`data/alike/`](data/alike/README.md)); Persian is the first. Persian has
+no /w/, so *very* and *wary* come close:
+
+```console
+$ cargo sanjeh alike --language fa --most 4 very
+vary         same    0.00  ˈveri        the same sound
+wary         near    0.20  ˈweri        /w/ for /v/
+fairy        near    0.25  ˈferi        /f/ for /v/
+ferry        near    0.25  ˈferi        /f/ for /v/
+```
+
+The costs are a first guess from the evidence. Still to come: a benchmark
+of learners' real mishearings to tune them against, and tables for other
+languages.
 
 ### How hard a line is to hear and to say — `line`
 

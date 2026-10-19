@@ -10,7 +10,10 @@
 //! changed costing by how far apart the two sounds are — voicing, place and
 //! manner for consonants, height, backness, rounding and length for vowels
 //! — and a sound dropped or added costing least at the end of a word, where
-//! fast speech drops them. Stress is left out. American and British readings
+//! fast speech drops them. A learner's first language makes some changes
+//! likelier — a sound it lacks heard as the nearest it has — as a table of
+//! lower costs per language (`data/alike/`, Persian first). Stress is left
+//! out. American and British readings
 //! both count, the nearer of them, unless one accent is asked for. Only
 //! words the CEFR lists know (`levels`) are candidates: a word a learner has
 //! never met is no test of their ear.
@@ -73,6 +76,10 @@ pub struct AlikeOptions {
     pub kinds: Vec<AlikeKind>,
     /// How many, the nearest first.
     pub most: usize,
+    /// The learner's first language, by its ISO 639-1 code (`fa`), when
+    /// Sanjeh has its table (`languages`); none, or one it hasn't, the
+    /// general costs only.
+    pub language: Option<String>,
 }
 
 impl Default for AlikeOptions {
@@ -82,6 +89,7 @@ impl Default for AlikeOptions {
             level: None,
             kinds: vec![],
             most: 10,
+            language: None,
         }
     }
 }
@@ -111,6 +119,7 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
     if own.is_empty() {
         return vec![];
     }
+    let costs = options.language.as_deref().and_then(costs_for).unwrap_or(&GENERAL);
     let most_level = options.level.map(|level| Level::ALL[(level as usize + 1).min(5)]);
     let wanted = |kind: AlikeKind| options.kinds.is_empty() || options.kinds.contains(&kind);
     let mut found: Vec<(Alike, Level)> = vec![];
@@ -130,7 +139,7 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
                 if sounds.len().abs_diff(reading.sounds.len()) > MOST_LENGTH_APART {
                     continue;
                 }
-                let apart = distance(sounds, &reading.sounds);
+                let apart = distance(sounds, &reading.sounds, costs);
                 let ranked =
                     apart + if *first { 0.0 } else { OTHER_READING } + if reading.first { 0.0 } else { OTHER_READING };
                 if best.is_none_or(|(nearest, ..)| ranked < nearest) {
@@ -159,7 +168,7 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
         let why = if kind == AlikeKind::Same {
             "the same sound".to_string()
         } else {
-            differences(sounds, &reading.sounds)
+            differences(sounds, &reading.sounds, costs)
         };
         found.push((
             Alike {
@@ -186,6 +195,88 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
 /// call it as a program starts, off its main thread.
 pub fn warm_alikes() {
     LazyLock::force(&CANDIDATES);
+}
+
+/// The first languages Sanjeh has a table for, by their ISO 639-1 codes.
+pub fn languages() -> &'static [&'static str] {
+    &["fa"]
+}
+
+// ---- Costs -----------------------------------------------------------------
+
+/// What each change costs: a sound turned into another (`changed`, by their
+/// places in `SOUNDS`), and a third consonant dropped at a word's end, when
+/// a language makes that likelier than any end consonant.
+struct Costs {
+    changed: Vec<f32>,
+    cluster_end: Option<f32>,
+}
+
+impl Costs {
+    fn changed(&self, a: u8, b: u8) -> f32 {
+        self.changed[a as usize * SOUNDS.len() + b as usize]
+    }
+}
+
+static GENERAL: LazyLock<Costs> = LazyLock::new(|| {
+    let n = SOUNDS.len();
+    let changed = (0..n * n)
+        .map(|at| general_change((at / n) as u8, (at % n) as u8))
+        .collect();
+    Costs {
+        changed,
+        cluster_end: None,
+    }
+});
+
+const PERSIAN: &str = include_str!("../../../data/alike/fa.tsv");
+
+static PERSIAN_COSTS: LazyLock<Costs> =
+    LazyLock::new(|| with_table(PERSIAN).expect("data/alike/fa.tsv is well formed"));
+
+fn costs_for(language: &str) -> Option<&'static Costs> {
+    match language.trim().to_lowercase().as_str() {
+        "fa" => Some(&PERSIAN_COSTS),
+        _ => None,
+    }
+}
+
+/// The general costs, lowered where a language's table says so.
+fn with_table(table: &str) -> Result<Costs, String> {
+    let n = SOUNDS.len();
+    let mut costs = Costs {
+        changed: GENERAL.changed.clone(),
+        cluster_end: None,
+    };
+    for (at, row) in table
+        .lines()
+        .enumerate()
+        .filter(|(_, row)| !row.trim().is_empty() && !row.starts_with('#'))
+    {
+        let fields: Vec<&str> = row.split('\t').collect();
+        let [kind, a, b, cost, _evidence, _source] = fields[..] else {
+            return Err(format!("line {}: six fields, tab-separated", at + 1));
+        };
+        let cost: f32 = cost.parse().map_err(|_| format!("line {}: cost {cost}", at + 1))?;
+        match kind {
+            "swap" => {
+                let find = |symbol: &str| {
+                    SOUNDS
+                        .iter()
+                        .position(|(each, _)| *each == symbol)
+                        .ok_or(format!("line {}: no sound {symbol}", at + 1))
+                };
+                let (a, b) = (find(a)?, find(b)?);
+                for (x, y) in [(a, b), (b, a)] {
+                    let slot = &mut costs.changed[x * n + y];
+                    *slot = slot.min(cost);
+                }
+            }
+            "cluster-end" => costs.cluster_end = Some(cost),
+            other => return Err(format!("line {}: kind {other}", at + 1)),
+        }
+    }
+    Ok(costs)
 }
 
 /// The farthest a near word may be.
@@ -463,8 +554,9 @@ fn symbol(at: u8) -> &'static str {
     SOUNDS[at as usize].0
 }
 
-/// What turning one sound into another costs: 0 for the same, up to 1.
-fn changed(a: u8, b: u8) -> f32 {
+/// What turning one sound into another costs, whoever the learner: 0 for
+/// the same, up to 1.
+fn general_change(a: u8, b: u8) -> f32 {
     if a == b {
         return 0.0;
     }
@@ -535,16 +627,24 @@ fn vowels_apart(a: Vowel, b: Vowel) -> f32 {
     .min(1.0)
 }
 
-/// What dropping or adding a sound costs: least for a weak vowel (*ə*) and
-/// *h*, which speech drops anywhere, and for a sound at the end of a word,
-/// where fast speech drops it (*las' night*); most for a vowel inside one.
-fn dropped(at: u8, at_end: bool) -> f32 {
-    match (symbol(at), sound(at)) {
+/// What dropping or adding the sound at `at` of a word's `sounds` costs:
+/// least for a weak vowel (*ə*) and *h*, which speech drops anywhere, and
+/// for a sound at the end of a word, where fast speech drops it (*las'
+/// night*) — and, where the learner's language makes it likelier (`costs`),
+/// for a third consonant there (*asked* heard as *ask*); most for a
+/// vowel inside one.
+fn dropped(sounds: &[u8], at: usize, at_end: bool, costs: &Costs) -> f32 {
+    let consonant = |at: usize| matches!(sound(sounds[at]), Sound::Consonant { .. });
+    let general: f32 = match (symbol(sounds[at]), sound(sounds[at])) {
         ("ə" | "ɚ" | "h", _) => 0.35,
         (_, Sound::Consonant { .. }) if at_end => 0.45,
         (_, Sound::Consonant { .. }) => 0.75,
         _ if at_end => 0.6,
         _ => 0.85,
+    };
+    match costs.cluster_end {
+        Some(cost) if at_end && at > 1 && consonant(at) && consonant(at - 1) && consonant(at - 2) => general.min(cost),
+        _ => general,
     }
 }
 
@@ -557,26 +657,26 @@ enum Step {
 }
 
 /// The cheapest way to turn `a`'s sounds into `b`'s, and its steps.
-fn steps(a: &[u8], b: &[u8]) -> (f32, Vec<Vec<(f32, Step)>>) {
+fn steps(a: &[u8], b: &[u8], costs: &Costs) -> (f32, Vec<Vec<(f32, Step)>>) {
     let (n, m) = (a.len(), b.len());
     let mut d = vec![vec![(0.0_f32, Step::Kept); m + 1]; n + 1];
     // Dropped before anything of `b`: at the end only when `b` is nothing.
     for i in 1..=n {
-        d[i][0] = (d[i - 1][0].0 + dropped(a[i - 1], m == 0), Step::Dropped);
+        d[i][0] = (d[i - 1][0].0 + dropped(a, i - 1, m == 0, costs), Step::Dropped);
     }
     for j in 1..=m {
-        d[0][j] = (d[0][j - 1].0 + dropped(b[j - 1], n == 0), Step::Added);
+        d[0][j] = (d[0][j - 1].0 + dropped(b, j - 1, n == 0, costs), Step::Added);
     }
     for i in 1..=n {
         for j in 1..=m {
-            let change = changed(a[i - 1], b[j - 1]);
+            let change = costs.changed(a[i - 1], b[j - 1]);
             let options = [
                 (
                     d[i - 1][j - 1].0 + change,
                     if change == 0.0 { Step::Kept } else { Step::Changed },
                 ),
-                (d[i - 1][j].0 + dropped(a[i - 1], j == m), Step::Dropped),
-                (d[i][j - 1].0 + dropped(b[j - 1], i == n), Step::Added),
+                (d[i - 1][j].0 + dropped(a, i - 1, j == m, costs), Step::Dropped),
+                (d[i][j - 1].0 + dropped(b, j - 1, i == n, costs), Step::Added),
             ];
             d[i][j] = options
                 .into_iter()
@@ -587,15 +687,15 @@ fn steps(a: &[u8], b: &[u8]) -> (f32, Vec<Vec<(f32, Step)>>) {
     (d[n][m].0, d)
 }
 
-fn distance(a: &[u8], b: &[u8]) -> f32 {
+fn distance(a: &[u8], b: &[u8], costs: &Costs) -> f32 {
     // Rounded, so a sum that should be 0.75 never ranks below one that is.
-    (steps(a, b).0 * 1000.0).round() / 1000.0
+    (steps(a, b, costs).0 * 1000.0).round() / 1000.0
 }
 
 /// What differs between two words' sounds, in plain IPA: `/ɝː/ for /ʊ/`,
 /// `+ /l/`, `− /t/`.
-fn differences(a: &[u8], b: &[u8]) -> String {
-    let (_, d) = steps(a, b);
+fn differences(a: &[u8], b: &[u8], costs: &Costs) -> String {
+    let (_, d) = steps(a, b, costs);
     let (mut i, mut j) = (a.len(), b.len());
     let mut said = vec![];
     while i > 0 || j > 0 {
@@ -745,6 +845,72 @@ mod tests {
     fn a_word_the_table_lacks_has_none() {
         assert!(alikes("Pasadenaish", &AlikeOptions::default()).is_empty());
         assert!(alikes("", &AlikeOptions::default()).is_empty());
+    }
+
+    fn persian(options: AlikeOptions) -> AlikeOptions {
+        AlikeOptions {
+            language: Some("fa".into()),
+            ..options
+        }
+    }
+
+    fn distance_to(word: &str, other: &str, options: &AlikeOptions) -> Option<f32> {
+        let wide = AlikeOptions {
+            most: 500,
+            ..options.clone()
+        };
+        alikes(word, &wide)
+            .into_iter()
+            .find(|alike| alike.word == other)
+            .map(|alike| alike.distance)
+    }
+
+    #[test]
+    fn the_persian_table_is_well_formed_and_its_sources_cited() {
+        assert!(with_table(PERSIAN).is_ok());
+        let cited = include_str!("../../../data/alike/README.md");
+        for row in PERSIAN
+            .lines()
+            .filter(|row| !row.trim().is_empty() && !row.starts_with('#'))
+        {
+            let source = row.split('\t').nth(5).unwrap();
+            assert!(cited.contains(&format!("**{source}**")), "{source} is cited");
+        }
+        assert!(
+            with_table("swap\tw\tx\t0.2\tinventory\tnone").is_err(),
+            "a sound the table never writes"
+        );
+    }
+
+    #[test]
+    fn a_persian_learners_likelier_swaps_come_nearer() {
+        let general = AlikeOptions::default();
+        let fa = persian(AlikeOptions::default());
+        // Persian has no /w/: *very* and *wary*.
+        assert!(distance_to("very", "wary", &fa) < distance_to("very", "wary", &general));
+        // Nor /θ/: *three* and *tree*.
+        assert!(distance_to("three", "tree", &fa) < distance_to("three", "tree", &general));
+        // Nor a long and short /iː/ and /ɪ/: *ship* and *sheep*.
+        assert!(distance_to("ship", "sheep", &fa) < distance_to("ship", "sheep", &general));
+        // A third consonant at the end: *asked* and *ask*; not a second,
+        // which Persian has: *think* and *thing*.
+        assert!(distance_to("asked", "ask", &fa) < distance_to("asked", "ask", &general));
+        assert_eq!(
+            distance_to("think", "thing", &fa),
+            distance_to("think", "thing", &general)
+        );
+        // And nothing else moves.
+        assert_eq!(distance_to("cat", "cap", &fa), distance_to("cat", "cap", &general));
+    }
+
+    #[test]
+    fn a_language_without_a_table_is_the_general_costs() {
+        let unknown = AlikeOptions {
+            language: Some("xx".into()),
+            ..AlikeOptions::default()
+        };
+        assert_eq!(alikes("very", &unknown), alikes("very", &AlikeOptions::default()));
+        assert_eq!(languages(), ["fa"]);
     }
 
     #[test]
