@@ -1,9 +1,10 @@
 //! Sanjeh (سنجه, "a measure"): what a language learner's material asks of
-//! them, measured — how an English word sounds, where a line's words melt
-//! into each other, and (to come) how hard a line is to hear and to say, and
+//! them, measured — how an English word sounds, which words sound like it,
+//! where a line's words melt into each other, and (to come) how hard a line is to hear and to say, and
 //! how much it is worth practising. Each measure has a benchmark beside it,
 //! so it can be improved by anyone, at every level from A1 to C2.
 
+pub mod alike;
 pub mod bench;
 pub mod connected;
 pub mod hear;

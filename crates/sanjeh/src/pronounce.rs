@@ -78,6 +78,17 @@ static WORDS: LazyLock<Table> = LazyLock::new(|| {
     Table { text, lines }
 });
 
+/// Every word the table has, with its readings in each accent (`|` between
+/// them), in the table's order: for a measure that compares a word with
+/// all others (`alike`).
+pub(crate) fn every_word() -> impl Iterator<Item = (&'static str, &'static str, &'static str)> {
+    (0..WORDS.lines.len()).map(|at| {
+        let mut fields = WORDS.line(at).split('\t');
+        let word = fields.next().unwrap_or("");
+        (word, fields.next().unwrap_or(""), fields.next().unwrap_or(""))
+    })
+}
+
 /// Reads the table now, rather than on the first word asked about: call it
 /// as a program starts, off its main thread.
 pub fn warm_pronouncing() {

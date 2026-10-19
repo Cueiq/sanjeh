@@ -4,6 +4,8 @@
 //! sanjeh pronounce [--gb] <word or phrase>             its sound in IPA, American or British
 //! sanjeh melts [--gb] <line>                           where its words melt, and the line as said
 //! sanjeh level <word>…                                 each word's CEFR level, by the open lists
+//! sanjeh alike [--us|--gb] [--level <A1…C2>] [--language fa] [--kind same,ending,near] [--most <n>] <word>
+//!                                                      the known words that sound like it
 //! sanjeh line show [--gb] --ms <duration> <line>      a line measured, in plain words
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
 //! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
@@ -17,6 +19,7 @@
 
 use std::process::ExitCode;
 
+use sanjeh::alike::{AlikeKind, AlikeOptions, alikes, languages};
 use sanjeh::bench::{Item, report};
 use sanjeh::connected::{melted, melts};
 use sanjeh::levels::Level;
@@ -76,7 +79,7 @@ fn text_of(args: &[String]) -> String {
     let mut rest = args.iter().skip(1);
     while let Some(arg) = rest.next() {
         match arg.as_str() {
-            "--ms" | "--model" => {
+            "--ms" | "--model" | "--level" | "--kind" | "--most" | "--language" => {
                 rest.next();
             }
             flag if flag.starts_with("--") => {}

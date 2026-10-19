@@ -39,7 +39,7 @@ You need [Rust](https://rustup.rs) (1.85 or newer) and, for fitting models,
 Python 3 with numpy.
 
 ```bash
-git clone https://github.com/its-saeed/sanjeh && cd sanjeh
+git clone https://github.com/Cueiq/sanjeh && cd sanjeh
 cargo test                                   # everything should pass
 echo '{"text": "Can I get a coffee, please?", "duration_ms": 1500}' | cargo sanjeh line measure -
 cargo sanjeh line bench benchmarks/example/items.jsonl --split all
@@ -53,7 +53,7 @@ nothing.
 
 ## Ways to help, and where to start
 
-- **Issues labelled [`good first issue`](https://github.com/its-saeed/sanjeh/labels/good%20first%20issue)**
+- **Issues labelled [`good first issue`](https://github.com/Cueiq/sanjeh/labels/good%20first%20issue)**
   are small and self-contained.
 - **Rate lines** for a benchmark, at your own level ([below](#rating-lines)).
 - **Find where a measure is wrong**: a line measured too easy or too hard,
