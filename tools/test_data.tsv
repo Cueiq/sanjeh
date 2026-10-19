@@ -1,0 +1,6 @@
+client_id	path	sentence	up_votes	down_votes	age	gender	accents	variant	locale	segment
+id1	audio_1.mp3	Hey, guys, I'm gonna throw something out there.	2	0	twenties	male	United States English	us	en
+id2	audio_2.mp3	The quick brown fox jumps over the lazy dog.	3	0	thirties	female	England English	gb	en
+id3	audio_3.mp3	I don't think that's a good idea.	1	0	teens	male	United States English	us	en
+id4	audio_4.mp3	Could you please pass the salt?	4	1	fourties	female	England English	gb	en
+id5	audio_5.mp3	It is raining heavily outside.	2	0	fifties	male	United States English	us	en

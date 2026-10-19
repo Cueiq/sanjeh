@@ -1,12 +1,57 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
+use sanjeh::connected::line_words;
 use sanjeh::line::{LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
 
 fn line(text: &str, ms: u32) -> LineInput {
     serde_json::from_value(serde_json::json!({ "text": text, "duration_ms": ms })).unwrap()
 }
 
+pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
+    if input.voices < 2 {
+        return vec![input.clone()];
+    }
+
+    let text = input.text.trim();
+    let parts: Vec<&str> = text
+        .split(|c| c == '-' || c == '—')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let parts_len = parts.len();
+    if parts_len < 2 {
+        return vec![input.clone()];
+    }
+
+    let mut outputs = vec![];
+
+    for part_text in parts {
+        let part_words = line_words(part_text);
+        if part_words.is_empty() {
+            continue;
+        }
+
+        let part_input = LineInput {
+            text: part_text.to_string(),
+            duration_ms: input.duration_ms / parts_len as u32,
+            accent: input.accent,
+            voices: 1,
+            heard: input.heard.clone(),
+            entries: input.entries.clone(),
+            names: input.names.clone(),
+        };
+
+        outputs.push(part_input);
+    }
+
+    if outputs.len() != parts_len {
+        return vec![input.clone()];
+    }
+
+    outputs
+}
 #[test]
 fn a_cut_off_line_or_two_voices_cant_be_practised() {
     let cut = facts(&line("This is the best thing I've ever put in my mouth...", 3000));
@@ -82,4 +127,33 @@ fn a_word_read_two_ways_still_has_its_hard_sounds() {
             .any(|(sound, word)| sound == "th" && word == "with")
     );
     assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}
+
+#[test]
+fn test_split_voices_basic() {
+    let mut cue = line("What are you doing? - What?", 2000);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].text, "What are you doing?");
+    assert_eq!(parts[0].voices, 1);
+    assert_eq!(parts[1].text, "What?");
+    assert_eq!(parts[1].voices, 1);
+}
+
+#[test]
+fn test_split_voices_single_voice_untouched() {
+    let cue = line("There are no bad situations.", 3000);
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].text, "There are no bad situations.");
+}
+
+#[test]
+fn test_split_voices_fallback_on_bad_split() {
+    let mut cue = line("Just a single line without dash", 2500);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].text, "Just a single line without dash");
 }

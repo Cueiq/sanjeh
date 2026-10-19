@@ -8,7 +8,16 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
 flate2 = { workspace = true }
+hound = "3.5.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 unicode-normalization = { workspace = true }
+whisper-rs = { version = "0.11", optional = true }
+tokio = "1.53.3"
+anyhow = "1.0.104"
+
+[features]
+hear = ["whisper-rs"]
+whisper-rs = ["dep:whisper-rs"]

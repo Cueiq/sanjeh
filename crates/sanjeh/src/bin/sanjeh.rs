@@ -8,6 +8,7 @@
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
 //! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
 //! sanjeh line bench    <items.jsonl> [--model <file>] [--split fit|test|all]
+//! sanjeh line hear     <clips.wav...> [--model <file>] decode audio clips using whisper
 //! ```
 //!
 //! An items file is a benchmark (`sanjeh::bench`); `measure` also takes
@@ -159,7 +160,6 @@ fn run(args: &[String]) -> Result<(), String> {
         Some("melts") => {
             let text = text_of(args);
             let found = melts(&text, accent_of(args));
-            // The line with each melted stretch as it is said; spans count UTF-16 units.
             let units: Vec<u16> = text.encode_utf16().collect();
             let mut said = String::new();
             let mut at = 0;
@@ -193,6 +193,67 @@ fn run(args: &[String]) -> Result<(), String> {
             show("mouth", &measured.mouth);
             return Ok(());
         }
+        Some("line") if args.get(1).map(String::as_str) == Some("hear") => {
+            #[cfg(not(feature = "hear"))]
+            return Err("The 'hear' feature is not enabled. Recompile with --features hear".into());
+
+            #[cfg(feature = "hear")]
+            {
+                let model = option(args, "--model").unwrap_or("models/tiny.en.bin");
+
+                let mut clips = vec![];
+                let mut iter = args.iter().skip(2);
+                while let Some(arg) = iter.next() {
+                    if arg == "--model" {
+                        iter.next(); // Skip the model path
+                    } else if !arg.starts_with("--") {
+                        clips.push(arg);
+                    }
+                }
+
+                if clips.is_empty() {
+                    return Err("usage: sanjeh line hear <clips.wav...> [--model <file>]".into());
+                }
+
+                println!("Loading Whisper model from: {}", model);
+                for clip_path in clips {
+                    println!("\nProcessing clip: {}", clip_path);
+
+                    let mut reader = match hound::WavReader::open(clip_path) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            eprintln!("Failed to open {}: {}", clip_path, e);
+                            continue;
+                        }
+                    };
+
+                    let spec = reader.spec();
+                    if spec.sample_rate != 16000 || spec.channels != 1 {
+                        eprintln!("Warning: {} is not 16kHz mono! Whisper might not work well.", clip_path);
+                    }
+
+                    let samples: Vec<f32> = if spec.sample_format == hound::SampleFormat::Int {
+                        reader
+                            .samples::<i16>()
+                            .map(|s| s.unwrap_or(0) as f32 / 32768.0)
+                            .collect()
+                    } else {
+                        reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect()
+                    };
+
+                    match sanjeh::hear::run_whisper_on_clip(&samples, model) {
+                        Ok(words) => {
+                            println!("Heard {} words:", words.len());
+                            for w in words {
+                                println!("- {} (p: {:.2})", w.word, w.p.unwrap_or(0.0));
+                            }
+                        }
+                        Err(e) => eprintln!("Error running whisper: {}", e),
+                    }
+                }
+                return Ok(());
+            }
+        }
         Some("level") => {
             for word in args.iter().skip(1) {
                 let level = word_level(word).map_or("not in the lists".to_string(), |level| format!("{level:?}"));
@@ -202,7 +263,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         _ => {}
     }
-    let usage = "usage: sanjeh (pronounce | melts | level) …, or sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
+    let usage = "usage: sanjeh (pronounce | melts | level) …, or sanjeh line (features|measure|bench|hear) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
     let (Some("line"), Some(command), Some(path)) = (
         args.first().map(String::as_str),
         args.get(1).map(String::as_str),
