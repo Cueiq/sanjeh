@@ -21,6 +21,7 @@ teachers and learners as much as from programmers.
 | `pronounce` | How does this word or phrase sound, in American or British English (IPA)? | done |
 | `connected` | Where do this line's words melt into each other (*gonna*, *the-rare* for *there are*)? | done |
 | `levels` | What CEFR level is this word, by the open word lists? | done |
+| `alike` | Which words a learner knows could be heard instead of this one (*too*, *two* for *to*)? | first version |
 | `line` | How hard is this line to **hear** (written down from the audio) and to **say** (shadowed with the speaker), and how much is it worth practising? Why? | first model, `v1` |
 | spoken try | How close did a learner's try come to the speaker's rhythm, intonation and sounds? | [#9](https://github.com/its-saeed/sanjeh/issues/9) |
 | two voices | Split a subtitle line said by two people into one line each | [#6](https://github.com/its-saeed/sanjeh/issues/6) |
@@ -125,6 +126,35 @@ toughie: not in the lists
 The lists grade words, not meanings, and miss much spoken English
 (*toughie*, *geez*): a word's level in its sentence is a measure still to
 come.
+
+### Words that sound like a word — `alike`
+
+The words a learner knows that could be heard instead of one that was said:
+the wrong answers a hearing exercise needs, since a random wrong word tests
+nothing. Words are compared by their sounds (`pronounce`), not their
+letters: a sound changed costs by how far apart the two sounds are, and a
+sound dropped or added costs least at the end of a word, where fast speech
+drops it. American and British readings both count, the nearer of them,
+unless `--us` or `--gb` asks for one. Candidates are the words the lists
+know (`levels`), up to the level above the learner's with `--level`.
+
+```console
+$ cargo sanjeh alike --level B1 --most 6 to
+too          same    0.00  tuː          the same sound
+two          same    0.00  tuː          the same sound
+do           near    0.25  duː          /d/ for /t/
+due          near    0.25  duː          /d/ for /t/
+sue          near    0.35  suː          /s/ for /t/
+tool         near    0.45  tuːl         + /l/
+$ cargo sanjeh alike --kind ending would
+would've     ending  0.80  ˈwʊdəv       + /ə/, + /v/
+wouldn't     ending  1.25  ˈwʊdənt      + /ə/, + /n/, + /t/
+```
+
+Three kinds: `same` (*to*, *two*), `ending` (*use*, *used*; *would*,
+*would've*) and `near` (*think*, *sink*). Still to come: the swaps a
+learner's first language makes likelier, as a table per language, and a
+benchmark of real mishearings to tune the costs against.
 
 ### How hard a line is to hear and to say — `line`
 

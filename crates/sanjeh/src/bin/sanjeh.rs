@@ -4,6 +4,8 @@
 //! sanjeh pronounce [--gb] <word or phrase>             its sound in IPA, American or British
 //! sanjeh melts [--gb] <line>                           where its words melt, and the line as said
 //! sanjeh level <word>…                                 each word's CEFR level, by the open lists
+//! sanjeh alike [--us|--gb] [--level <A1…C2>] [--kind same,ending,near] [--most <n>] <word>
+//!                                                      the known words that sound like it
 //! sanjeh line show [--gb] --ms <duration> <line>      a line measured, in plain words
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
 //! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
@@ -16,6 +18,7 @@
 
 use std::process::ExitCode;
 
+use sanjeh::alike::{AlikeKind, AlikeOptions, alikes};
 use sanjeh::bench::{Item, report};
 use sanjeh::connected::{melted, melts};
 use sanjeh::levels::Level;
@@ -75,7 +78,7 @@ fn text_of(args: &[String]) -> String {
     let mut rest = args.iter().skip(1);
     while let Some(arg) = rest.next() {
         match arg.as_str() {
-            "--ms" | "--model" => {
+            "--ms" | "--model" | "--level" | "--kind" | "--most" => {
                 rest.next();
             }
             flag if flag.starts_with("--") => {}
@@ -193,6 +196,53 @@ fn run(args: &[String]) -> Result<(), String> {
             show("mouth", &measured.mouth);
             return Ok(());
         }
+        Some("alike") => {
+            let word = text_of(args);
+            let level = match option(args, "--level") {
+                Some(level) => Some(Level::parse(level).ok_or(format!("--level {level}: one of A1 to C2"))?),
+                None => None,
+            };
+            let kinds = option(args, "--kind")
+                .map(|kinds| {
+                    kinds
+                        .split(',')
+                        .map(|kind| AlikeKind::parse(kind).ok_or(format!("--kind {kind}: same, ending or near")))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?
+                .unwrap_or_default();
+            let most = match option(args, "--most") {
+                Some(most) => most.parse().map_err(|_| format!("--most {most}: a number"))?,
+                None => 10,
+            };
+            let accent = if args.iter().any(|a| a == "--gb") {
+                Some(Accent::Gb)
+            } else if args.iter().any(|a| a == "--us") {
+                Some(Accent::Us)
+            } else {
+                None
+            };
+            let found = alikes(
+                &word,
+                &AlikeOptions {
+                    accent,
+                    level,
+                    kinds,
+                    most,
+                },
+            );
+            if found.is_empty() {
+                println!("none");
+            }
+            for alike in found {
+                let kind = format!("{:?}", alike.kind).to_lowercase();
+                println!(
+                    "{:<12} {kind:<7} {:.2}  {:<12} {}",
+                    alike.word, alike.distance, alike.sound, alike.why
+                );
+            }
+            return Ok(());
+        }
         Some("level") => {
             for word in args.iter().skip(1) {
                 let level = word_level(word).map_or("not in the lists".to_string(), |level| format!("{level:?}"));
@@ -202,7 +252,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         _ => {}
     }
-    let usage = "usage: sanjeh (pronounce | melts | level) …, or sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
+    let usage = "usage: sanjeh (pronounce | melts | level | alike) …, or sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
     let (Some("line"), Some(command), Some(path)) = (
         args.first().map(String::as_str),
         args.get(1).map(String::as_str),

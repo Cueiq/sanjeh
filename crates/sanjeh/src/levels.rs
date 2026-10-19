@@ -67,6 +67,128 @@ static WORDS: LazyLock<HashMap<String, Level>> = LazyLock::new(|| {
     words
 });
 
+/// Every word the lists have and the part of speech it is listed as, with
+/// its level.
+static LISTED: LazyLock<Vec<(String, String, Level)>> = LazyLock::new(|| {
+    let mut listed = vec![];
+    for list in [CEFRJ, OCTANOVE] {
+        for row in list.lines().skip(1) {
+            let mut fields = row.splitn(4, ',');
+            let (Some(heads), Some(pos), Some(level)) = (fields.next(), fields.next(), fields.next()) else {
+                continue;
+            };
+            let Some(level) = Level::parse(level) else { continue };
+            for head in heads.split('/') {
+                let head = head.trim().to_lowercase();
+                if !head.is_empty() {
+                    listed.push((head, pos.trim().to_string(), level));
+                }
+            }
+        }
+    }
+    listed
+});
+
+/// Every word the lists have, and every form its part of speech takes by
+/// the spelling rules — a noun's plural, a verb's *-s*, *-ed* and *-ing*,
+/// an adjective's *-er* and *-est* — and the irregular forms below, each at
+/// the lowest level it comes from.
+static FORMS: LazyLock<HashMap<String, Level>> = LazyLock::new(|| {
+    let mut forms: HashMap<String, Level> = HashMap::new();
+    let put = |forms: &mut HashMap<String, Level>, form: String, level: Level| {
+        let at = forms.entry(form).or_insert(level);
+        *at = (*at).min(level);
+    };
+    for (head, pos, level) in LISTED.iter() {
+        put(&mut forms, head.clone(), *level);
+        if head.contains(' ') {
+            continue;
+        }
+        let made: Vec<String> = match pos.as_str() {
+            "noun" => vec![with_s(head)],
+            "verb" => [vec![with_s(head)], with_ending(head, "ed"), with_ending(head, "ing")].concat(),
+            "adjective" => [with_ending(head, "er"), with_ending(head, "est")].concat(),
+            _ => vec![],
+        };
+        for form in made {
+            put(&mut forms, form, *level);
+        }
+    }
+    for (form, base) in IRREGULAR {
+        if let Some(level) = forms.get(*base).copied() {
+            put(&mut forms, form.to_string(), level);
+        }
+    }
+    forms
+});
+
+fn is_vowel(c: u8) -> bool {
+    matches!(c, b'a' | b'e' | b'i' | b'o' | b'u')
+}
+
+/// Whether a word ends consonant, vowel, consonant, as *stop* and *big*
+/// do, and may double its last letter before an ending that starts with a
+/// vowel. Whether it does depends on its stress (*admitted*, *visited*),
+/// which the spelling doesn't say: both are made, and a spelling no word
+/// has is never asked for.
+fn may_double(word: &str) -> bool {
+    let b = word.as_bytes();
+    let n = b.len();
+    n >= 3
+        && !is_vowel(b[n - 1])
+        && !matches!(b[n - 1], b'w' | b'x' | b'y')
+        && is_vowel(b[n - 2])
+        && !is_vowel(b[n - 3])
+}
+
+fn ends_consonant_y(word: &str) -> bool {
+    let b = word.as_bytes();
+    b.len() >= 2 && b[b.len() - 1] == b'y' && !is_vowel(b[b.len() - 2])
+}
+
+fn with_s(word: &str) -> String {
+    if ends_consonant_y(word) {
+        format!("{}ies", &word[..word.len() - 1])
+    } else if ["s", "x", "z", "ch", "sh", "o"].iter().any(|end| word.ends_with(end)) {
+        format!("{word}es")
+    } else {
+        format!("{word}s")
+    }
+}
+
+/// A word with an ending that starts with a vowel — *-ed*, *-ing*, *-er*,
+/// *-est* — by the spelling rules: *liked*, *tried*, *lying*, *bigger*.
+fn with_ending(word: &str, ending: &str) -> Vec<String> {
+    let mut made = vec![];
+    if ending == "ing" {
+        if let Some(stem) = word.strip_suffix("ie") {
+            made.push(format!("{stem}ying"));
+        } else if word.ends_with('e') && !word.ends_with("ee") && word.len() > 2 {
+            made.push(format!("{}ing", &word[..word.len() - 1]));
+        } else {
+            made.push(format!("{word}ing"));
+        }
+    } else if word.ends_with('e') {
+        made.push(format!("{word}{}", &ending[1..]));
+    } else if ends_consonant_y(word) {
+        made.push(format!("{}i{ending}", &word[..word.len() - 1]));
+    } else {
+        made.push(format!("{word}{ending}"));
+    }
+    if may_double(word) {
+        made.push(format!("{word}{}{ending}", &word[word.len() - 1..]));
+    }
+    made
+}
+
+/// The level of a word the lists have as it is written, or as a form its
+/// part of speech takes (`FORMS`): stricter than `word_level`, which takes
+/// any ending off any word — *cannes* is no plural of *can*, nor *yous* of
+/// *you*. `None` for any other word.
+pub fn listed_level(word: &str) -> Option<Level> {
+    FORMS.get(&word.to_lowercase()).copied()
+}
+
 /// Past forms the suffix rules can't undo, and plurals and comparisons.
 const IRREGULAR: &[(&str, &str)] = &[
     ("was", "be"),
@@ -236,6 +358,20 @@ mod tests {
         assert_eq!(word_level("Saving"), Some(Level::A1));
         assert_eq!(word_level("grieving"), Some(Level::B2));
         assert_eq!(word_level("Pasadena"), None);
+    }
+
+    #[test]
+    fn a_listed_level_takes_only_the_forms_a_words_part_of_speech_has() {
+        assert_eq!(listed_level("used"), Some(Level::A1));
+        assert_eq!(listed_level("seemed"), listed_level("seem"));
+        assert_eq!(listed_level("stopped"), Some(Level::A1));
+        assert_eq!(listed_level("bigger"), Some(Level::A1));
+        assert_eq!(listed_level("cities"), Some(Level::A1));
+        assert_eq!(listed_level("went"), Some(Level::A1));
+        assert_eq!(listed_level("cans"), Some(Level::A2), "the noun's plural");
+        assert_eq!(listed_level("cannes"), None);
+        assert_eq!(listed_level("yous"), None, "a pronoun takes no -s");
+        assert_eq!(listed_level("Pasadena"), None);
     }
 
     #[test]
