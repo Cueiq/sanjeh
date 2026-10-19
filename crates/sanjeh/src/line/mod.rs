@@ -170,7 +170,8 @@ pub struct LineMeasure {
 /// `models/line/` that has beaten the one before it on the benchmarks.
 pub fn default_model() -> &'static LineModel {
     static MODEL: std::sync::LazyLock<LineModel> = std::sync::LazyLock::new(|| {
-        LineModel::from_json(include_str!("../../models/line/v1.json")).expect("models/line/v1.json is a line model")
+        LineModel::from_json(include_str!("../../../../models/line/v1.json"))
+            .expect("models/line/v1.json is a line model")
     });
     &MODEL
 }
