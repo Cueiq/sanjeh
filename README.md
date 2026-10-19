@@ -1,6 +1,6 @@
 # Sanjeh
 
-[![CI](https://github.com/its-saeed/sanjeh/actions/workflows/ci.yml/badge.svg)](https://github.com/its-saeed/sanjeh/actions/workflows/ci.yml)
+[![CI](https://github.com/Cueiq/sanjeh/actions/workflows/ci.yml/badge.svg)](https://github.com/Cueiq/sanjeh/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 *Sanjeh* (سنجه) is Persian for "a measure". It measures what English
@@ -23,9 +23,9 @@ teachers and learners as much as from programmers.
 | `levels` | What CEFR level is this word, by the open word lists? | done |
 | `alike` | Which words a learner knows could be heard instead of this one (*too*, *two* for *to*)? | first version |
 | `line` | How hard is this line to **hear** (written down from the audio) and to **say** (shadowed with the speaker), and how much is it worth practising? Why? | first model, `v1` |
-| spoken try | How close did a learner's try come to the speaker's rhythm, intonation and sounds? | [#9](https://github.com/its-saeed/sanjeh/issues/9) |
-| two voices | Split a subtitle line said by two people into one line each | [#6](https://github.com/its-saeed/sanjeh/issues/6) |
-| placement | A learner's level for listening and speaking, by a five-minute adaptive test | [design](docs/placement.md), [#10](https://github.com/its-saeed/sanjeh/issues/10) |
+| spoken try | How close did a learner's try come to the speaker's rhythm, intonation and sounds? | [#9](https://github.com/Cueiq/sanjeh/issues/9) |
+| two voices | Split a subtitle line said by two people into one line each | [#6](https://github.com/Cueiq/sanjeh/issues/6) |
+| placement | A learner's level for listening and speaking, by a five-minute adaptive test | [design](docs/placement.md), [#10](https://github.com/Cueiq/sanjeh/issues/10) |
 | `words` | A word's level in its sentence, not only by the word lists | planned |
 
 ## Try it
@@ -33,7 +33,7 @@ teachers and learners as much as from programmers.
 You need [Rust](https://rustup.rs) 1.85 or newer.
 
 ```bash
-git clone https://github.com/its-saeed/sanjeh && cd sanjeh
+git clone https://github.com/Cueiq/sanjeh && cd sanjeh
 cargo test
 cargo sanjeh melts "I'm going to tell him."
 ```
@@ -43,7 +43,7 @@ output from it. To use Sanjeh as a library, add it from Git:
 
 ```toml
 [dependencies]
-sanjeh = { git = "https://github.com/its-saeed/sanjeh" }
+sanjeh = { git = "https://github.com/Cueiq/sanjeh" }
 ```
 
 ## The measures
@@ -199,7 +199,7 @@ find hard such as *th* and *w*, and the *weak ear*: what weaker speech
 recognisers missed in the clip, given as `heard`, since learners' mistakes
 rise where recognisers err). The default, `v1`, is a first model, fitted to
 one learner's ratings: its levels bunch around B1 and B2. A benchmark rated
-by learners at every level ([#1](https://github.com/its-saeed/sanjeh/issues/1))
+by learners at every level ([#1](https://github.com/Cueiq/sanjeh/issues/1))
 is what will spread them out.
 
 ```bash
@@ -216,16 +216,16 @@ println!("{:.1} to hear, {:.1} to say", measured.ear.level, measured.mouth.level
 
 ### Measures to come
 
-- **A spoken try** ([#9](https://github.com/its-saeed/sanjeh/issues/9)): how
+- **A spoken try** ([#9](https://github.com/Cueiq/sanjeh/issues/9)): how
   close a learner's try came to the speaker's rhythm, intonation, stress and
   sounds, judged against experts' scores.
-- **Two voices** ([#6](https://github.com/its-saeed/sanjeh/issues/6)): a
+- **Two voices** ([#6](https://github.com/Cueiq/sanjeh/issues/6)): a
   subtitle line said by two people split into one line each.
-- **The weak ear built in** ([#5](https://github.com/its-saeed/sanjeh/issues/5)):
+- **The weak ear built in** ([#5](https://github.com/Cueiq/sanjeh/issues/5)):
   Sanjeh running the speech recognisers itself.
 - **Placement**: a learner's level for listening and for speaking, by a
   five-minute adaptive test, kept up to date by their practice — see
-  [the design](docs/placement.md) and [#10](https://github.com/its-saeed/sanjeh/issues/10).
+  [the design](docs/placement.md) and [#10](https://github.com/Cueiq/sanjeh/issues/10).
 - **A word's level in its sentence**, not only by the word lists.
 
 ## How it is built
@@ -272,7 +272,7 @@ If you use the word levels, cite the CEFR-J Wordlist as its notice asks.
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md): how to set up, add a feature,
 fit and judge a model, add a benchmark, or rate lines. Issues labelled
-[good first issue](https://github.com/its-saeed/sanjeh/labels/good%20first%20issue)
+[good first issue](https://github.com/Cueiq/sanjeh/labels/good%20first%20issue)
 are a good way in; the most needed help is
-[a public benchmark rated at every level](https://github.com/its-saeed/sanjeh/issues/1).
+[a public benchmark rated at every level](https://github.com/Cueiq/sanjeh/issues/1).
 Please follow the [code of conduct](CODE_OF_CONDUCT.md).
