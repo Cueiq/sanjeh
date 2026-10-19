@@ -15,11 +15,11 @@
 //! rater found right is B2, one they found easy is below B2, one they found
 //! hard is C1 or above.
 
-use serde::{Deserialize, Serialize};
 use clap::Args;
-use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 
 use crate::levels::Level;
 use crate::line::{LineInput, LineMeasure, Skill};

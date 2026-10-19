@@ -5,10 +5,7 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 use crate::line::HeardWord;
 
 #[cfg(feature = "hear")]
-pub fn run_whisper_on_clip(
-    audio_samples: &[f32],
-    model_path: &str,
-) -> Result<Vec<HeardWord>, String> {
+pub fn run_whisper_on_clip(audio_samples: &[f32], model_path: &str) -> Result<Vec<HeardWord>, String> {
     let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
         .map_err(|e| format!("Failed to load model: {}", e))?;
 
@@ -41,7 +38,10 @@ pub fn run_whisper_on_clip(
 
             let word = text.trim().to_string();
             if !word.is_empty() && !word.starts_with('[') && word.chars().any(|c| c.is_alphanumeric()) {
-                heard_words.push(HeardWord { word, p: Some(prob as f64) });
+                heard_words.push(HeardWord {
+                    word,
+                    p: Some(prob as f64),
+                });
             }
         }
     }
