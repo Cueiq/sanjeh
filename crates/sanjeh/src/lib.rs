@@ -23,6 +23,8 @@ pub const CONNECTED_SPEECH_JSON: &str = include_str!("../../../data/connected-sp
 /// The notices the pronouncing table's sources ask to be shipped with it.
 pub const PRONOUNCING_NOTICE: &str = include_str!("../../../data/pronouncing/NOTICE.md");
 
+pub const LEVELS_NOTICE: &str = "Word-level data based on CEFR materials and frequency vocabulary lists.";
+
 use unicode_normalization::UnicodeNormalization;
 
 /// What parts an English term's words: the ASCII spaces and controls, NEL,
