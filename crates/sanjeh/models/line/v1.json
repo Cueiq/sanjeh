@@ -1,0 +1,36 @@
+{
+  "name": "v1",
+  "about": "Default line model",
+  "ear": {
+    "level": {
+      "features": ["words", "chars", "hard_words", "hard_sounds", "melts", "everyday", "pace"],
+      "mean": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "sd": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+      "weights": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      "bias": 0.0
+    },
+    "worth": {
+      "features": ["words"],
+      "mean": [0.0],
+      "sd": [1.0],
+      "weights": [0.1],
+      "bias": 0.0
+    }
+  },
+  "mouth": {
+    "level": {
+      "features": ["words"],
+      "mean": [0.0],
+      "sd": [1.0],
+      "weights": [0.1],
+      "bias": 0.0
+    },
+    "worth": {
+      "features": ["words"],
+      "mean": [0.0],
+      "sd": [1.0],
+      "weights": [0.1],
+      "bias": 0.0
+    }
+  }
+}

@@ -122,10 +122,7 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
     let costs = options.language.as_deref().and_then(costs_for).unwrap_or(&GENERAL);
     let most_level = options.level.map(|level| Level::ALL[(level as usize + 1).min(5)]);
     let wanted = |kind: AlikeKind| options.kinds.is_empty() || options.kinds.contains(&kind);
-    // Each kept: its distance, kind and level, and what `why` is worked
-    // out from — only for those returned, once sorted.
-    let mut found: Vec<Kept> = vec![];
-    let mut rows = Rows::default();
+    let mut found: Vec<(Alike, Level)> = vec![];
     for candidate in CANDIDATES.iter() {
         if candidate.word == key || most_level.is_some_and(|most| candidate.level > most) {
             continue;
@@ -142,10 +139,7 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
                 if sounds.len().abs_diff(reading.sounds.len()) > MOST_LENGTH_APART {
                     continue;
                 }
-                // Farther than any kind keeps: given up on as soon as it is.
-                let Some(apart) = distance_within(sounds, &reading.sounds, costs, MOST_FOR_ENDING, &mut rows) else {
-                    continue;
-                };
+                let apart = distance(sounds, &reading.sounds, costs);
                 let ranked =
                     apart + if *first { 0.0 } else { OTHER_READING } + if reading.first { 0.0 } else { OTHER_READING };
                 if best.is_none_or(|(nearest, ..)| ranked < nearest) {
@@ -171,46 +165,30 @@ pub fn alikes(word: &str, options: &AlikeOptions) -> Vec<Alike> {
         if !wanted(kind) {
             continue;
         }
-        found.push(Kept {
-            distance,
-            kind,
-            candidate,
-            reading,
-            sounds,
-        });
+        let why = if kind == AlikeKind::Same {
+            "the same sound".to_string()
+        } else {
+            differences(sounds, &reading.sounds, costs)
+        };
+        found.push((
+            Alike {
+                word: candidate.word.to_string(),
+                kind,
+                distance,
+                sound: reading.text.to_string(),
+                why,
+            },
+            candidate.level,
+        ));
     }
-    found.sort_by(|a, b| {
+    found.sort_by(|(a, a_level), (b, b_level)| {
         a.distance
             .total_cmp(&b.distance)
             .then(a.kind.cmp(&b.kind))
-            .then(a.candidate.level.cmp(&b.candidate.level))
-            .then(a.candidate.word.cmp(b.candidate.word))
+            .then(a_level.cmp(b_level))
+            .then(a.word.cmp(&b.word))
     });
-    found
-        .into_iter()
-        .take(options.most)
-        .map(|kept| Alike {
-            word: kept.candidate.word.to_string(),
-            kind: kept.kind,
-            distance: kept.distance,
-            sound: kept.reading.text.to_string(),
-            why: if kept.kind == AlikeKind::Same {
-                "the same sound".to_string()
-            } else {
-                differences(kept.sounds, &kept.reading.sounds, costs)
-            },
-        })
-        .collect()
-}
-
-/// A word kept for `alikes`: what it is sorted by, and what `why` is
-/// worked out from, once it is among those returned.
-struct Kept<'a> {
-    distance: f32,
-    kind: AlikeKind,
-    candidate: &'a Candidate,
-    reading: &'a Reading,
-    sounds: &'a [u8],
+    found.into_iter().take(options.most).map(|(alike, _)| alike).collect()
 }
 
 /// Reads the candidates now, rather than on the first word asked about:
@@ -656,55 +634,19 @@ fn vowels_apart(a: Vowel, b: Vowel) -> f32 {
 /// for a third consonant there (*asked* heard as *ask*); most for a
 /// vowel inside one.
 fn dropped(sounds: &[u8], at: usize, at_end: bool, costs: &Costs) -> f32 {
-    let facts = &*FACTS;
-    let consonant = |at: usize| facts[sounds[at] as usize].consonant;
-    let fact = facts[sounds[at] as usize];
-    let general = if at_end {
-        fact.dropped_at_end
-    } else {
-        fact.dropped_inside
+    let consonant = |at: usize| matches!(sound(sounds[at]), Sound::Consonant { .. });
+    let general: f32 = match (symbol(sounds[at]), sound(sounds[at])) {
+        ("ə" | "ɚ" | "h", _) => 0.35,
+        (_, Sound::Consonant { .. }) if at_end => 0.45,
+        (_, Sound::Consonant { .. }) => 0.75,
+        _ if at_end => 0.6,
+        _ => 0.85,
     };
     match costs.cluster_end {
         Some(cost) if at_end && at > 1 && consonant(at) && consonant(at - 1) && consonant(at - 2) => general.min(cost),
         _ => general,
     }
 }
-
-/// What dropping each sound costs, and whether it is a consonant, worked
-/// out once rather than for every pair of words compared.
-#[derive(Clone, Copy)]
-struct Fact {
-    consonant: bool,
-    dropped_at_end: f32,
-    dropped_inside: f32,
-}
-
-static FACTS: LazyLock<Vec<Fact>> = LazyLock::new(|| {
-    SOUNDS
-        .iter()
-        .map(|(symbol, sound)| {
-            let consonant = matches!(sound, Sound::Consonant { .. });
-            let weak = matches!(*symbol, "ə" | "ɚ" | "h");
-            Fact {
-                consonant,
-                dropped_at_end: if weak {
-                    0.35
-                } else if consonant {
-                    0.45
-                } else {
-                    0.6
-                },
-                dropped_inside: if weak {
-                    0.35
-                } else if consonant {
-                    0.75
-                } else {
-                    0.85
-                },
-            }
-        })
-        .collect()
-});
 
 #[derive(Clone, Copy)]
 enum Step {
@@ -745,43 +687,9 @@ fn steps(a: &[u8], b: &[u8], costs: &Costs) -> (f32, Vec<Vec<(f32, Step)>>) {
     (d[n][m].0, d)
 }
 
-/// The two rows `distance_within` keeps.
-#[derive(Default)]
-struct Rows(Vec<f32>, Vec<f32>);
-
-/// The distance between two words' sounds, as `steps` finds it, or none
-/// once it is sure to be more than `most`: every way through passes each
-/// row of the table, and no step costs less than nothing, so a row whose
-/// every cell is past `most` ends it. Two rows are kept, not the table, in
-/// `rows`, which one word's comparisons share.
-fn distance_within(a: &[u8], b: &[u8], costs: &Costs, most: f32, rows: &mut Rows) -> Option<f32> {
-    let (n, m) = (a.len(), b.len());
-    let Rows(above, row) = rows;
-    above.clear();
-    row.clear();
-    row.resize(m + 1, 0.0);
-    above.push(0.0_f32);
-    for j in 1..=m {
-        above.push(above[j - 1] + dropped(b, j - 1, n == 0, costs));
-    }
-    for i in 1..=n {
-        row[0] = above[0] + dropped(a, i - 1, m == 0, costs);
-        let mut least = row[0];
-        for j in 1..=m {
-            let kept = above[j - 1] + costs.changed(a[i - 1], b[j - 1]);
-            let gone = above[j] + dropped(a, i - 1, j == m, costs);
-            let added = row[j - 1] + dropped(b, j - 1, i == n, costs);
-            row[j] = kept.min(gone).min(added);
-            least = least.min(row[j]);
-        }
-        if least > most + 0.0005 {
-            return None;
-        }
-        std::mem::swap(above, row);
-    }
+fn distance(a: &[u8], b: &[u8], costs: &Costs) -> f32 {
     // Rounded, so a sum that should be 0.75 never ranks below one that is.
-    let found = (above[m] * 1000.0).round() / 1000.0;
-    (found <= most).then_some(found)
+    (steps(a, b, costs).0 * 1000.0).round() / 1000.0
 }
 
 /// What differs between two words' sounds, in plain IPA: `/ɝː/ for /ʊ/`,
