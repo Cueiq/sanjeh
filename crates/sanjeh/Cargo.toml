@@ -7,16 +7,16 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+hear = ["dep:whisper-rs", "dep:hound"]
+
 [dependencies]
 anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
 flate2 = { workspace = true }
 hound = { version = "3.5.1", optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 unicode-normalization = { workspace = true }
 whisper-rs = { version = "0.11", optional = true }
-clap = { version = "4.6.7", features = ["derive"] }
-
-[features]
-default = []
-hear = ["dep:whisper-rs", "dep:hound"]
