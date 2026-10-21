@@ -12,6 +12,8 @@ pub mod hear;
 pub mod levels;
 pub mod line;
 mod pronounce;
+mod spoken;
+
 pub use pronounce::{Accent, Pronounced, pronounce, readings, warm_pronouncing};
 
 /// The rules of connected speech and their word lists, as data: for a copy

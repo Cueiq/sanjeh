@@ -135,10 +135,12 @@ pub fn report(items: &[(Item, LineMeasure)], skill: Skill) -> SkillReport {
         .filter_map(|(level, _, l)| l.level.map(|v| (*level, v, l.rater_level)))
         .collect();
     let matched = voted.iter().filter(|(level, v, r)| vote_for(*level, *r) == *v).count();
+
     let level_auc = auc(&voted
         .iter()
         .map(|(level, v, r)| (level - r.rank(), *v != Vote::Easy))
         .collect::<Vec<_>>());
+
     let worths: Vec<_> = rows
         .iter()
         .filter_map(|(_, w, l)| l.worth.map(|x| (*w, x == Worth::Yes)))
@@ -205,7 +207,6 @@ pub fn run_benchmark(args: BenchmarkArgs) -> anyhow::Result<()> {
 
     println!("Loaded {} benchmark items successfully.", items_count);
 
-    // ذخیره گزارش نهایی
     println!("Benchmark evaluation completed. Report target: {:?}", args.output);
     Ok(())
 }
