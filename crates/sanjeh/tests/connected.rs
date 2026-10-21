@@ -154,6 +154,8 @@ fn written_single_word_fusions_are_found() {
         ("dunno", "dunno"),
         ("lemme", "lemme"),
         ("gimme", "gimme"),
+        ("c'mon", "c'mon"),
+        ("cannot", "cannot"),
     ];
 
     for (input, expected_sound) in cases {

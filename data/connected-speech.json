@@ -246,6 +246,8 @@
     { "words": "what do you", "sound": "whaddya", "ipa": { "us": "ˈwʌɾəjə", "gb": "ˈwɒdəjə" } },
     { "words": "what are you", "sound": "whatcha", "ipa": { "us": "ˈwʌtʃə", "gb": "ˈwɒtʃə" } },
     { "words": "don't you", "sound": "dontcha", "ipa": { "us": "ˈdoʊntʃə", "gb": "ˈdəʊntʃə" } },
+    { "words": "c'mon", "sound": "c'mon", "ipa": { "us": "kəˈmɑn", "gb": "kəˈmɒn" } },
+    { "words": "cannot", "sound": "cannot", "ipa": { "us": "ˈkænɑt", "gb": "ˈkænɒt" } },
     { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } }
   ]
 }
