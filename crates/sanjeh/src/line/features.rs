@@ -217,11 +217,12 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
 /// The facts of a line.
 pub fn facts(input: &LineInput) -> Facts {
     let text = input.text.trim();
+    let spoken_text = super::numbers::expand_numbers(text);
     let accent = input.accent;
-    let ranges = line_words(text);
+    let ranges = line_words(&spoken_text);
     let tokens: Vec<String> = ranges
         .iter()
-        .map(|r| text[r.clone()].to_lowercase().replace('’', "'"))
+        .map(|r| spoken_text[r.clone()].to_lowercase().replace('’', "'"))
         .collect();
     let known_names: Vec<String> = input.names.iter().map(|n| n.to_lowercase()).collect();
 
@@ -230,8 +231,8 @@ pub fn facts(input: &LineInput) -> Facts {
     let capital: Vec<bool> = ranges
         .iter()
         .map(|r| {
-            let word = &text[r.clone()];
-            let before = text[..r.start].trim_end();
+            let word = &spoken_text[r.clone()];
+            let before = spoken_text[..r.start].trim_end();
             word.starts_with(char::is_uppercase)
                 && !matches!(word, "I" | "I'm" | "I'll" | "I've" | "I'd" | "OK")
                 && before.chars().last().is_some_and(|c| !".?!-\"“…".contains(c))
@@ -308,7 +309,7 @@ pub fn facts(input: &LineInput) -> Facts {
     // Sound.
     let syllable_count: usize = tokens.iter().map(|t| syllables(t, accent)).sum();
     let seconds = (input.duration_ms.max(400) as f64) / 1000.0;
-    let found = melts(text, accent);
+    let found = melts(&spoken_text, accent);
     let melt_list: Vec<(String, String, String)> = found
         .iter()
         .filter_map(|m| {
@@ -316,7 +317,7 @@ pub fn facts(input: &LineInput) -> Facts {
             let last = ranges.get(m.words.end.checked_sub(1)?)?;
             Some((
                 m.rule.to_string(),
-                text[first.start..last.end].to_string(),
+                spoken_text[first.start..last.end].to_string(),
                 m.sound.clone(),
             ))
         })

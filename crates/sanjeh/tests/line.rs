@@ -67,6 +67,46 @@ fn a_hyphenated_number_is_not_a_hard_word() {
 }
 
 #[test]
+fn numeric_literals_are_measured_as_spoken_words() {
+    let examples = [
+        ("I paid 10,000 dollars.", "I paid ten thousand dollars."),
+        ("I was born in 1999.", "I was born in nineteen ninety-nine."),
+        ("She finished 1st.", "She finished first."),
+        ("Meet me at 9:30.", "Meet me at nine thirty."),
+    ];
+
+    for (numeric, written_out) in examples {
+        let numeric_facts = facts(&line(numeric, 3000));
+        let written_facts = facts(&line(written_out, 3000));
+
+        assert_eq!(
+            numeric_facts.tokens, written_facts.tokens,
+            "tokens differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.syllables, written_facts.syllables,
+            "syllables differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["words"], written_facts.features["words"],
+            "word counts differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["hard_words"], written_facts.features["hard_words"],
+            "hard word counts differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["common"], written_facts.features["common"],
+            "common word shares differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.whole_sentence, written_facts.whole_sentence,
+            "sentence validity differs for {numeric:?}"
+        );
+    }
+}
+
+#[test]
 fn a_name_mid_sentence_is_not_a_hard_word() {
     let f = facts(&line("I think I'm ready to pull the trigger on Batman.", 3000));
     assert_eq!(f.names, ["batman"]);
