@@ -13,11 +13,13 @@
 //! Beside them come the **reasons**, what makes the line hard and what makes
 //! it worth it, in a form an app can put in words.
 
+mod cue;
 mod features;
 pub mod heard;
 mod model;
 mod numbers;
 
+pub use cue::{PreparedCue, prepare_cue};
 use serde::{Deserialize, Serialize};
 
 pub use features::{Facts, Features, facts};

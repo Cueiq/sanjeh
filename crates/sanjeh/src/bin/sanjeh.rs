@@ -23,7 +23,7 @@ use sanjeh::bench::{Item, report};
 use sanjeh::connected::{melted, melts};
 use sanjeh::levels::Level;
 use sanjeh::levels::word_level;
-use sanjeh::line::{LineInput, LineModel, Reason, Skill, SkillMeasure, WhyNot, facts, measure};
+use sanjeh::line::{LineInput, LineModel, Reason, Skill, SkillMeasure, WhyNot, facts, measure, prepare_cue};
 use sanjeh::{Accent, Pronounced, pronounce, readings};
 
 fn main() -> ExitCode {
@@ -182,11 +182,13 @@ fn run(args: &[String]) -> Result<(), String> {
             let ms: u32 = option(args, "--ms")
                 .and_then(|ms| ms.parse().ok())
                 .ok_or("--ms <how long it is said, in milliseconds> is needed")?;
+            let prepared = prepare_cue(&text_of(&args[1..]));
+
             let input = LineInput {
-                text: text_of(&args[1..]),
+                text: prepared.text,
                 duration_ms: ms,
                 accent: accent_of(args),
-                voices: 1,
+                voices: prepared.voices,
                 heard: None,
                 entries: vec![],
                 names: vec![],
