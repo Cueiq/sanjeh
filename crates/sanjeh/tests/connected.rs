@@ -156,6 +156,8 @@ fn written_single_word_fusions_are_found() {
         ("gimme", "gimme"),
         ("c'mon", "c'mon"),
         ("cannot", "cannot"),
+        ("'cause", "'cause"),
+        ("'em", "'em"),
     ];
 
     for (input, expected_sound) in cases {

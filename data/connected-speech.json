@@ -248,6 +248,8 @@
     { "words": "don't you", "sound": "dontcha", "ipa": { "us": "ˈdoʊntʃə", "gb": "ˈdəʊntʃə" } },
     { "words": "c'mon", "sound": "c'mon", "ipa": { "us": "kəˈmɑn", "gb": "kəˈmɒn" } },
     { "words": "cannot", "sound": "cannot", "ipa": { "us": "ˈkænɑt", "gb": "ˈkænɒt" } },
-    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } }
+    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } },
+    { "words": "'cause", "sound": "'cause", "ipa": { "us": "kəz", "gb": "kəz" } },
+    { "words": "'em", "sound": "'em", "ipa": { "us": "əm", "gb": "əm" } }
   ]
 }
