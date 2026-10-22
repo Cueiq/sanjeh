@@ -41,6 +41,21 @@ fn a_pair_written_as_said_and_its_melts_are_reasons() {
 }
 
 #[test]
+fn leading_apostrophe_fusions_are_reasons_in_line_analysis() {
+    for text in ["I did it 'cause I could.", "Tell 'em what happened."] {
+        let f = facts(&line(text, 3000));
+        let reasons = f.reasons(Skill::Ear);
+
+        assert!(
+            reasons
+                .iter()
+                .any(|reason| matches!(reason, Reason::Melt { rule, .. } if rule == "fusion")),
+            "{text}: expected a fusion reason"
+        );
+    }
+}
+
+#[test]
 fn a_name_mid_sentence_is_not_a_hard_word() {
     let f = facts(&line("I think I'm ready to pull the trigger on Batman.", 3000));
     assert_eq!(f.names, ["batman"]);

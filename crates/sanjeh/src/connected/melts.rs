@@ -107,9 +107,10 @@ fn phrased(line: &str) -> Vec<(Range<usize>, usize)> {
 
         let leading_fusion = ["'cause", "'em", "’cause", "’em"].into_iter().find(|fusion| {
             line[start..].starts_with(fusion)
-                && line[start + fusion.len()..].chars().next().map_or(true, |next| {
-                    !next.is_alphanumeric() && !matches!(next, '\'' | '’' | '-')
-                })
+                && line[start + fusion.len()..]
+                    .chars()
+                    .next()
+                    .is_none_or(|next| !next.is_alphanumeric() && !matches!(next, '\'' | '’' | '-'))
         });
 
         if let Some(fusion) = leading_fusion {
