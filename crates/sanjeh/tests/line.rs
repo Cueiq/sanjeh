@@ -56,6 +56,17 @@ fn leading_apostrophe_fusions_are_reasons_in_line_analysis() {
 }
 
 #[test]
+fn a_hyphenated_number_is_not_a_hard_word() {
+    let f = facts(&line("I paid ninety-nine dollars in nineteen ninety-nine.", 3500));
+
+    assert!(
+        f.hard_words.iter().all(|(word, _)| word != "ninety-nine"),
+        "number words should not be treated as rare: {:?}",
+        f.hard_words
+    );
+}
+
+#[test]
 fn a_name_mid_sentence_is_not_a_hard_word() {
     let f = facts(&line("I think I'm ready to pull the trigger on Batman.", 3000));
     assert_eq!(f.names, ["batman"]);
