@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 
 use sanjeh::Accent;
-use sanjeh::connected::{RuleAccent, Sounds, connected_speech, melts};
+use sanjeh::connected::{RuleAccent, Sounds, connected_speech, line_words, melts};
 
 const RULES: [&str; 12] = [
     "linking",
@@ -169,5 +169,29 @@ fn written_single_word_fusions_are_found() {
             assert_eq!(fusion.sound, expected_sound, "{input}, {accent:?}");
             assert!(!fusion.ipa.is_empty(), "{input}, {accent:?}: empty IPA");
         }
+    }
+}
+
+#[test]
+fn leading_apostrophe_fusions_keep_their_apostrophe() {
+    for input in ["'cause", "'em"] {
+        let words = line_words(input);
+
+        assert_eq!(words.len(), 1, "{input}");
+        assert_eq!(&input[words[0].clone()], input, "{input}");
+    }
+
+    for input in ["'emergency", "'hello'"] {
+        let words = line_words(input);
+
+        assert_eq!(
+            words.iter().map(|range| &input[range.clone()]).collect::<Vec<_>>(),
+            if input == "'emergency" {
+                vec!["emergency"]
+            } else {
+                vec!["hello"]
+            },
+            "{input}"
+        );
     }
 }

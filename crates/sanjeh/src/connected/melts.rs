@@ -104,6 +104,25 @@ fn phrased(line: &str) -> Vec<(Range<usize>, usize)> {
     let mut at = 0;
     while at < chars.len() {
         let (start, c) = chars[at];
+
+        let leading_fusion = ["'cause", "'em", "’cause", "’em"].into_iter().find(|fusion| {
+            line[start..].starts_with(fusion)
+                && line[start + fusion.len()..].chars().next().map_or(true, |next| {
+                    !next.is_alphanumeric() && !matches!(next, '\'' | '’' | '-')
+                })
+        });
+
+        if let Some(fusion) = leading_fusion {
+            if paused && !words.is_empty() {
+                phrase += 1;
+            }
+            paused = false;
+
+            words.push((start..start + fusion.len(), phrase));
+            at += fusion.chars().count();
+            continue;
+        }
+
         if c.is_alphanumeric() {
             let mut end = at + 1;
             // An apostrophe or a hyphen inside a word is part of it.
