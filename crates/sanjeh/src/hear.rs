@@ -106,6 +106,61 @@ pub fn tokens_to_words(tokens: &[(&str, f32)]) -> Vec<HeardWord> {
     heard_words
 }
 
+/// Reads a WAV file and strictly enforces 16kHz, mono, and 16-bit/32-bit format.
+/// Returns audio samples normalized to [-1.0, 1.0] for Whisper.
+pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
+    let mut reader = hound::WavReader::open(path).map_err(|e| format!("Failed to open WAV file: {}", e))?;
+    let spec = reader.spec();
+
+    // 1. Strict check for Mono (1 channel)
+    if spec.channels != 1 {
+        return Err(format!(
+            "Unsupported audio: expected 1 channel (mono), got {}. Please convert the file.",
+            spec.channels
+        ));
+    }
+
+    // 2. Strict check for 16 kHz sample rate
+    if spec.sample_rate != 16000 {
+        return Err(format!(
+            "Unsupported audio: expected 16000 Hz sample rate, got {} Hz. Please convert the file.",
+            spec.sample_rate
+        ));
+    }
+
+    let mut audio_samples = Vec::new();
+
+    // 3. Strict check for Bit Depth (refuse 24-bit which causes silence)
+    match spec.sample_format {
+        hound::SampleFormat::Int => {
+            if spec.bits_per_sample != 16 {
+                return Err(format!(
+                    "Unsupported audio: expected 16-bit integer samples, got {}-bit.",
+                    spec.bits_per_sample
+                ));
+            }
+            for sample in reader.samples::<i16>() {
+                let s = sample.map_err(|e| format!("Failed to read audio sample: {}", e))?;
+                audio_samples.push(s as f32 / 32768.0); // Normalize to [-1.0, 1.0]
+            }
+        }
+        hound::SampleFormat::Float => {
+            if spec.bits_per_sample != 32 {
+                return Err(format!(
+                    "Unsupported audio: expected 32-bit float samples, got {}-bit.",
+                    spec.bits_per_sample
+                ));
+            }
+            for sample in reader.samples::<f32>() {
+                let s = sample.map_err(|e| format!("Failed to read audio sample: {}", e))?;
+                audio_samples.push(s);
+            }
+        }
+    }
+
+    Ok(audio_samples)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

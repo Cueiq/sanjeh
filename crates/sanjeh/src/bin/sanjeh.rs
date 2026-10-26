@@ -227,26 +227,12 @@ fn run(args: &[String]) -> Result<(), String> {
                 for clip_path in clips {
                     println!("\nProcessing clip: {}", clip_path);
 
-                    let mut reader = match hound::WavReader::open(clip_path) {
-                        Ok(r) => r,
+                    let samples = match sanjeh::hear::read_audio_for_whisper(clip_path) {
+                        Ok(s) => s,
                         Err(e) => {
-                            eprintln!("Failed to open {}: {}", clip_path, e);
+                            eprintln!("Skipping {}: {}", clip_path, e);
                             continue;
                         }
-                    };
-
-                    let spec = reader.spec();
-                    if spec.sample_rate != 16000 || spec.channels != 1 {
-                        eprintln!("Warning: {} is not 16kHz mono! Whisper might not work well.", clip_path);
-                    }
-
-                    let samples: Vec<f32> = if spec.sample_format == hound::SampleFormat::Int {
-                        reader
-                            .samples::<i16>()
-                            .map(|s| s.unwrap_or(0) as f32 / 32768.0)
-                            .collect()
-                    } else {
-                        reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect()
                     };
 
                     match model.transcribe(&samples) {
@@ -271,7 +257,7 @@ fn run(args: &[String]) -> Result<(), String> {
             let kinds = option(args, "--kind")
                 .map(|kinds| {
                     kinds
-                        .split(&[','])
+                        .split(',')
                         .map(|kind| AlikeKind::parse(kind).ok_or(format!("--kind {kind}: same, ending or near")))
                         .collect::<Result<Vec<_>, _>>()
                 })
