@@ -9,7 +9,6 @@ use crate::{Pronounced, pronounce, readings};
 
 use super::heard::{Hearing, WordKind, hearing};
 use super::{Entry, LineInput, Reason, Skill, WhyNot};
-
 /// A line's features by name, the numbers a model weighs. Their names are
 /// the contract with the models in `models/line/`:
 ///
