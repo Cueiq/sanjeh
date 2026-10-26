@@ -12,8 +12,6 @@ default = []
 hear = ["dep:whisper-rs", "dep:hound"]
 
 [dependencies]
-anyhow = "1.0.104"
-clap = { version = "4.6.7", features = ["derive"] }
 flate2 = { workspace = true }
 hound = { version = "3.5.1", optional = true }
 serde = { workspace = true }

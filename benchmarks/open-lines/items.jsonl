@@ -1,5 +1,0 @@
-{"id": "cv-0", "group": "common_voice", "split": "fit", "input": {"text": "Hey, guys, I'm gonna throw something out there.", "duration_ms": 0, "accent": "us", "voices": 1, "entries": [], "names": []}, "labels": []}
-{"id": "cv-1", "group": "common_voice", "split": "fit", "input": {"text": "The quick brown fox jumps over the lazy dog.", "duration_ms": 0, "accent": "gb", "voices": 1, "entries": [], "names": []}, "labels": []}
-{"id": "cv-2", "group": "common_voice", "split": "fit", "input": {"text": "I don't think that's a good idea.", "duration_ms": 0, "accent": "us", "voices": 1, "entries": [], "names": []}, "labels": []}
-{"id": "cv-3", "group": "common_voice", "split": "fit", "input": {"text": "Could you please pass the salt?", "duration_ms": 0, "accent": "gb", "voices": 1, "entries": [], "names": []}, "labels": []}
-{"id": "cv-4", "group": "common_voice", "split": "test", "input": {"text": "It is raining heavily outside.", "duration_ms": 0, "accent": "us", "voices": 1, "entries": [], "names": []}, "labels": []}

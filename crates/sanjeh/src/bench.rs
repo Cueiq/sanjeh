@@ -15,11 +15,7 @@
 //! rater found right is B2, one they found easy is below B2, one they found
 //! hard is C1 or above.
 
-use clap::Args;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
 
 use crate::levels::Level;
 use crate::line::{LineInput, LineMeasure, Skill};
@@ -174,54 +170,5 @@ pub fn report(items: &[(Item, LineMeasure)], skill: Skill) -> SkillReport {
         ),
         worth_yes: share(called.iter().filter(|(_, y)| *y).count(), called.len()),
         by_level,
-    }
-}
-
-#[derive(Args, Debug, Clone)]
-pub struct BenchmarkArgs {
-    /// Path to the evaluation dataset file (JSON Lines)
-    #[arg(short, long, default_value = "dataset.json")]
-    pub dataset: PathBuf,
-
-    /// Output report path
-    #[arg(short, long, default_value = "report.json")]
-    pub output: PathBuf,
-}
-
-/// Executes the benchmark evaluation command, loading items and generating reports.
-pub fn run_benchmark(args: BenchmarkArgs) -> anyhow::Result<()> {
-    println!("Reading benchmark dataset from: {:?}", args.dataset);
-
-    let file = File::open(&args.dataset)?;
-    let reader = BufReader::new(file);
-
-    let mut items_count = 0;
-    for line in reader.lines() {
-        let line = line?;
-        if line.trim().is_empty() {
-            continue;
-        }
-        let _item: Item = serde_json::from_str(&line)?;
-        items_count += 1;
-    }
-
-    println!("Loaded {} benchmark items successfully.", items_count);
-
-    println!("Benchmark evaluation completed. Report target: {:?}", args.output);
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_benchmark_args_defaults() {
-        let args = BenchmarkArgs {
-            dataset: PathBuf::from("dataset.json"),
-            output: PathBuf::from("report.json"),
-        };
-        assert_eq!(args.dataset, PathBuf::from("dataset.json"));
-        assert_eq!(args.output, PathBuf::from("report.json"));
     }
 }
