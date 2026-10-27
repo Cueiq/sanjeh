@@ -149,3 +149,18 @@ fn a_word_read_two_ways_still_has_its_hard_sounds() {
     );
     assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
 }
+
+#[test]
+fn a_proper_name_at_sentence_start_is_not_a_hard_word() {
+    let f = facts(&line("Elizabeth arrived at the station.", 2500));
+
+    assert_eq!(f.names, ["elizabeth"]);
+    assert!(f.hard_words.iter().all(|(w, _)| w != "elizabeth"));
+}
+
+#[test]
+fn a_common_word_at_sentence_start_is_not_a_name() {
+    let f = facts(&line("Maybe we should leave now.", 2500));
+
+    assert!(f.names.is_empty());
+}

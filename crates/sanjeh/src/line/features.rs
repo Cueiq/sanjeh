@@ -233,9 +233,11 @@ pub fn facts(input: &LineInput) -> Facts {
         .map(|r| {
             let word = &spoken_text[r.clone()];
             let before = spoken_text[..r.start].trim_end();
+            let sentence_start = before.chars().last().is_none_or(|c| ".?!-\"“…".contains(c));
+
             word.starts_with(char::is_uppercase)
                 && !matches!(word, "I" | "I'm" | "I'll" | "I've" | "I'd" | "OK")
-                && before.chars().last().is_some_and(|c| !".?!-\"“…".contains(c))
+                && (!sentence_start || word_level(&word.to_lowercase()).is_none())
         })
         .collect();
     let said_wrong: Vec<String> = tokens
