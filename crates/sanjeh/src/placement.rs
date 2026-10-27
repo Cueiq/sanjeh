@@ -102,10 +102,11 @@ pub struct Cuts {
 
 impl Default for Cuts {
     fn default() -> Cuts {
-        Cuts { between: [2.0, 3.0, 4.0, 5.0, 6.0] }
+        Cuts {
+            between: [2.0, 3.0, 4.0, 5.0, 6.0],
+        }
     }
 }
-
 
 impl Item {
     /// Probability that a learner of ability `theta` answers a word correctly.
@@ -204,13 +205,7 @@ fn pseudo_random_index(seed: u64, count: usize) -> usize {
 
 /// The most informative items at the current theta, one drawn from the best few
 /// with the caller's seed.
-pub fn next_item<'a>(
-    bank: &'a Bank,
-    now: Estimate,
-    taken: &[String],
-    part: Task,
-    seed: u64,
-) -> Option<&'a Item> {
+pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item> {
     let mut candidates: Vec<(&Item, f64)> = bank
         .items
         .iter()
@@ -303,9 +298,21 @@ mod tests {
 
         let initial = estimate(&[], &bank, prior);
         let answers = vec![
-            Answer { item: "item_5".to_string(), right: 5, of: 5 },
-            Answer { item: "item_8".to_string(), right: 5, of: 5 },
-            Answer { item: "item_12".to_string(), right: 5, of: 5 },
+            Answer {
+                item: "item_5".to_string(),
+                right: 5,
+                of: 5,
+            },
+            Answer {
+                item: "item_8".to_string(),
+                right: 5,
+                of: 5,
+            },
+            Answer {
+                item: "item_12".to_string(),
+                right: 5,
+                of: 5,
+            },
         ];
         let after = estimate(&answers, &bank, prior);
 
@@ -319,9 +326,21 @@ mod tests {
 
         let initial = estimate(&[], &bank, prior);
         let answers = vec![
-            Answer { item: "item_5".to_string(), right: 0, of: 5 },
-            Answer { item: "item_8".to_string(), right: 0, of: 5 },
-            Answer { item: "item_12".to_string(), right: 0, of: 5 },
+            Answer {
+                item: "item_5".to_string(),
+                right: 0,
+                of: 5,
+            },
+            Answer {
+                item: "item_8".to_string(),
+                right: 0,
+                of: 5,
+            },
+            Answer {
+                item: "item_12".to_string(),
+                right: 0,
+                of: 5,
+            },
         ];
         let after = estimate(&answers, &bank, prior);
 
@@ -334,12 +353,24 @@ mod tests {
         let prior = Prior::centred_on(3.0);
 
         let e0 = estimate(&[], &bank, prior);
-        let a1 = vec![Answer { item: "item_8".to_string(), right: 3, of: 5 }];
+        let a1 = vec![Answer {
+            item: "item_8".to_string(),
+            right: 3,
+            of: 5,
+        }];
         let e1 = estimate(&a1, &bank, prior);
 
         let a2 = vec![
-            Answer { item: "item_8".to_string(), right: 3, of: 5 },
-            Answer { item: "item_9".to_string(), right: 4, of: 5 },
+            Answer {
+                item: "item_8".to_string(),
+                right: 3,
+                of: 5,
+            },
+            Answer {
+                item: "item_9".to_string(),
+                right: 4,
+                of: 5,
+            },
         ];
         let e2 = estimate(&a2, &bank, prior);
 
