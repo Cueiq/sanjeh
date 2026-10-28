@@ -1,56 +1,11 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
-use sanjeh::connected::line_words;
+use sanjeh::line::split_voices;
 use sanjeh::line::{LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
 
 fn line(text: &str, ms: u32) -> LineInput {
     serde_json::from_value(serde_json::json!({ "text": text, "duration_ms": ms })).unwrap()
-}
-
-pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
-    if input.voices < 2 {
-        return vec![input.clone()];
-    }
-
-    let text = input.text.trim();
-    let parts: Vec<&str> = text
-        .split(['-', '—'])
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    let parts_len = parts.len();
-    if parts_len < 2 {
-        return vec![input.clone()];
-    }
-
-    let mut outputs = vec![];
-
-    for part_text in parts {
-        let part_words = line_words(part_text);
-        if part_words.is_empty() {
-            continue;
-        }
-
-        let part_input = LineInput {
-            text: part_text.to_string(),
-            duration_ms: input.duration_ms / parts_len as u32,
-            accent: input.accent,
-            voices: 1,
-            heard: input.heard.clone(),
-            entries: input.entries.clone(),
-            names: input.names.clone(),
-        };
-
-        outputs.push(part_input);
-    }
-
-    if outputs.len() != parts_len {
-        return vec![input.clone()];
-    }
-
-    outputs
 }
 
 #[test]

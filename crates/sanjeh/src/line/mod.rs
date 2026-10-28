@@ -203,3 +203,50 @@ pub fn measure(input: &LineInput, model: &LineModel) -> LineMeasure {
 fn sigmoid(x: f64) -> f64 {
     1.0 / (1.0 + (-x).exp())
 }
+
+/// Splits a line with multiple voices into separate LineInputs based on dialogue markers.
+pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
+    if input.voices < 2 {
+        return vec![input.clone()];
+    }
+
+    let text = input.text.trim();
+
+    let parts: Vec<&str> = text
+        .split(['-', '—'])
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let parts_len = parts.len();
+    if parts_len < 2 {
+        return vec![input.clone()];
+    }
+
+    let mut outputs = vec![];
+
+    for part_text in parts {
+        let part_words = crate::connected::line_words(part_text);
+        if part_words.is_empty() {
+            continue;
+        }
+
+        let part_input = LineInput {
+            text: part_text.to_string(),
+            duration_ms: input.duration_ms / parts_len as u32,
+            accent: input.accent,
+            voices: 1,
+            heard: input.heard.clone(),
+            entries: input.entries.clone(),
+            names: input.names.clone(),
+        };
+
+        outputs.push(part_input);
+    }
+
+    if outputs.len() < 2 {
+        return vec![input.clone()];
+    }
+
+    outputs
+}
