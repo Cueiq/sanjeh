@@ -290,6 +290,33 @@ pub fn level(theta: f64, cuts: Cuts) -> Level {
     }
 }
 
+/// Keep an ability estimate up to date as the learner practises: nudge theta
+/// towards how they did on this item, and narrow how far off it may be.
+pub fn update(now: &Estimate, item: &Item, answer: &Answer) -> Estimate {
+    if answer.of == 0 {
+        return *now;
+    }
+
+    let p = item.p(now.theta);
+    let actual = (answer.right as f64) / (answer.of as f64);
+    let error = actual - p;
+
+    // How far theta moves: big steps early on when se is wide, smaller steps
+    // once we know more.
+    let k = now.se.min(1.0) * item.discrimination * 0.4;
+    let new_theta = now.theta + k * error;
+
+    // Each answered line gives a little more certainty.
+    let info = item.information(now.theta);
+    let se_reduction = 0.01 * (1.0 + info).ln().min(0.05);
+    let new_se = (now.se - se_reduction).max(0.15);
+
+    Estimate {
+        theta: new_theta,
+        se: new_se,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -614,5 +641,72 @@ mod tests {
             estimate(&too_many, &bank, prior).unwrap(),
             estimate(&all_right, &bank, prior).unwrap()
         );
+    }
+
+    #[test]
+    fn update_climbs_on_better_than_expected() {
+        let item = Item {
+            id: "i1".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        };
+        // A learner at 3.0 getting all five words right should climb.
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let ans = Answer {
+            item: "i1".to_string(),
+            right: 5,
+            of: 5,
+        };
+        let updated = update(&now, &item, &ans);
+
+        assert!(updated.theta > now.theta);
+        assert!(updated.se < now.se);
+    }
+
+    #[test]
+    fn update_falls_on_worse_than_expected() {
+        let item = Item {
+            id: "i1".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        };
+        // Getting zero words right should bring the estimate down.
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let ans = Answer {
+            item: "i1".to_string(),
+            right: 0,
+            of: 5,
+        };
+        let updated = update(&now, &item, &ans);
+
+        assert!(updated.theta < now.theta);
+        assert!(updated.se < now.se);
+    }
+
+    #[test]
+    fn update_handles_zero_total_words() {
+        let item = Item {
+            id: "i1".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 0,
+        };
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let ans = Answer {
+            item: "i1".to_string(),
+            right: 0,
+            of: 0,
+        };
+        let updated = update(&now, &item, &ans);
+
+        assert_eq!(updated, now);
     }
 }
