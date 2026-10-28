@@ -37,6 +37,8 @@ jobs:
         run: cargo build --workspace
       - name: Build workspace with hear feature
         run: cargo build --workspace --features hear
+        env:
+          WHISPER_DONT_GENERATE_BINDINGS: "1"
 
   clippy:
     runs-on: ubuntu-latest
@@ -51,6 +53,8 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Clippy with hear feature
         run: cargo clippy --workspace --all-targets --features hear -- -D warnings
+        env:
+          WHISPER_DONT_GENERATE_BINDINGS: "1"
 
   test:
     runs-on: ubuntu-latest
@@ -63,3 +67,5 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Test
         run: cargo test --workspace
+        env:
+          WHISPER_DONT_GENERATE_BINDINGS: "1"
