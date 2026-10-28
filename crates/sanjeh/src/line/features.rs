@@ -7,7 +7,7 @@ use crate::connected::{connected_speech, line_words, melts};
 use crate::levels::{Level, word_level};
 use crate::{Pronounced, pronounce, readings};
 
-use super::heard::{Hearing, WordKind, hearing};
+use super::heard::{Heard, Hearing, WordKind, hearing};
 use super::{Entry, LineInput, Reason, Skill, WhyNot};
 
 /// A line's features by name, the numbers a model weighs. Their names are
@@ -188,6 +188,25 @@ fn w_readings(word: &str) -> Vec<String> {
     out
 }
 
+/// Returns the speech duration from word timings, when available.
+fn heard_duration_ms(heard: &Heard) -> Option<u32> {
+    for words in [&heard.small, &heard.base, &heard.tiny] {
+        let (Some(first), Some(last)) = (words.first(), words.last()) else {
+            continue;
+        };
+
+        let (Some(start_ms), Some(end_ms)) = (first.start_ms, last.end_ms) else {
+            continue;
+        };
+
+        if end_ms > start_ms {
+            return Some(end_ms - start_ms);
+        }
+    }
+
+    None
+}
+
 fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
     let Some(sound) = ipa(word, accent) else { return vec![] };
     let sound: String = sound.chars().filter(|c| !matches!(c, 'ˈ' | 'ˌ')).collect();
@@ -308,9 +327,15 @@ pub fn facts(input: &LineInput) -> Facts {
         vocab -= 0.5;
     }
 
+    let duration_ms = input
+        .heard
+        .as_ref()
+        .and_then(heard_duration_ms)
+        .unwrap_or(input.duration_ms);
+
     // Sound.
     let syllable_count: usize = tokens.iter().map(|t| syllables(t, accent)).sum();
-    let seconds = (input.duration_ms.max(400) as f64) / 1000.0;
+    let seconds = (duration_ms.max(400) as f64) / 1000.0;
     let found = melts(&spoken_text, accent);
     let melt_list: Vec<(String, String, String)> = found
         .iter()
@@ -417,7 +442,7 @@ pub fn facts(input: &LineInput) -> Facts {
         tokens,
         whole_sentence,
         voices: input.voices,
-        duration_ms: input.duration_ms,
+        duration_ms,
         syllables: syllable_count,
         names,
         said_wrong,

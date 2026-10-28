@@ -1,10 +1,19 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
-use sanjeh::line::{LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
+use sanjeh::line::{Heard, HeardWord, LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
 
 fn line(text: &str, ms: u32) -> LineInput {
     serde_json::from_value(serde_json::json!({ "text": text, "duration_ms": ms })).unwrap()
+}
+
+fn heard_word(word: &str, start_ms: Option<u32>, end_ms: Option<u32>) -> HeardWord {
+    HeardWord {
+        word: word.to_string(),
+        p: Some(0.9),
+        start_ms,
+        end_ms,
+    }
 }
 
 #[test]
@@ -104,6 +113,46 @@ fn numeric_literals_are_measured_as_spoken_words() {
             "sentence validity differs for {numeric:?}"
         );
     }
+}
+
+#[test]
+fn speech_duration_uses_word_timings_when_available() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(1000), Some(1200)),
+            heard_word("can", Some(1200), Some(1600)),
+            heard_word("do", Some(1600), Some(2000)),
+            heard_word("it", Some(2200), Some(2500)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 1500);
+    assert_eq!(f.features["sps"], f.syllables as f64 / 1.5);
+}
+
+#[test]
+fn speech_duration_falls_back_to_subtitle_duration() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(2500), Some(2600)),
+            heard_word("can", Some(2600), Some(2700)),
+            heard_word("do", Some(2700), Some(2800)),
+            heard_word("it", Some(2800), Some(1000)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 5000);
+    assert_eq!(f.features["sps"], f.syllables as f64 / 5.0);
 }
 
 #[test]

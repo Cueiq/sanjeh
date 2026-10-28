@@ -36,7 +36,8 @@ pub struct LineInput {
     /// notes for the deaf (*(CHUCKLES)*, *STUART:*). A sentence that runs
     /// over two subtitles is one line.
     pub text: String,
-    /// How long it is said for.
+    /// How long the subtitle lasts, in milliseconds; used as the speech
+    /// duration when word timings are unavailable.
     pub duration_ms: u32,
     /// The accent it is said in, for its melts and sounds.
     #[serde(default = "american")]
