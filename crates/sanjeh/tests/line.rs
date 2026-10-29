@@ -1,6 +1,7 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
+use sanjeh::line::split_voices;
 use sanjeh::line::{LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
 
 fn line(text: &str, ms: u32) -> LineInput {
@@ -82,4 +83,42 @@ fn a_word_read_two_ways_still_has_its_hard_sounds() {
             .any(|(sound, word)| sound == "th" && word == "with")
     );
     assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}
+
+#[test]
+fn test_split_voices_basic() {
+    let mut cue = line("What are you doing? - What?", 2000);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].text, "What are you doing?");
+    assert_eq!(parts[0].voices, 1);
+    assert_eq!(parts[1].text, "What?");
+    assert_eq!(parts[1].voices, 1);
+}
+
+#[test]
+fn test_split_voices_single_voice_untouched() {
+    let cue = line("There are no bad situations.", 3000);
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].text, "There are no bad situations.");
+}
+
+#[test]
+fn test_split_voices_fallback_on_bad_split() {
+    let mut cue = line("Just a single line without dash", 2500);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].text, "Just a single line without dash");
+}
+#[test]
+fn test_split_voices_keeps_hyphenated_words() {
+    let mut cue = line("- That is a well-known fact. - I know.", 3000);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].text, "That is a well-known fact.");
+    assert_eq!(parts[1].text, "I know.");
 }
