@@ -8,14 +8,12 @@ pub struct WhisperModel {
 }
 
 impl WhisperModel {
-    /// Load the Whisper model once so it can be reused across multiple clips.
     pub fn load(model_path: &str) -> Result<Self, String> {
         let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
             .map_err(|e| format!("Failed to load model: {}", e))?;
         Ok(Self { ctx })
     }
 
-    /// Transcribe audio samples and return recognized words with probabilities.
     pub fn transcribe(&self, audio_samples: &[f32]) -> Result<Vec<HeardWord>, String> {
         let mut state = self
             .ctx
@@ -33,27 +31,28 @@ impl WhisperModel {
             .full(params, audio_samples)
             .map_err(|e| format!("Failed to run model: {}", e))?;
 
-        let num_segments = state
-            .full_n_segments()
-            .map_err(|e| format!("Failed to get segments: {}", e))?;
-
-        let mut all_tokens = Vec::new();
+        let num_segments = state.full_n_segments();
+        let mut heard_words = Vec::new();
 
         for i in 0..num_segments {
-            let num_tokens = state.full_n_tokens(i).unwrap_or(0);
-            for j in 0..num_tokens {
-                let text = state.full_get_token_text(i, j).unwrap_or_default();
-                let prob = state.full_get_token_prob(i, j).unwrap_or(0.0);
-                all_tokens.push((text, prob));
+            if let Some(segment) = state.get_segment(i) {
+                let text = segment.to_string();
+                for raw_word in text.split_whitespace() {
+                    let word_str = raw_word.trim().to_string();
+                    if !word_str.is_empty() && word_str.chars().any(|c| c.is_alphanumeric()) {
+                        heard_words.push(HeardWord {
+                            word: word_str,
+                            p: Some(1.0),
+                        });
+                    }
+                }
             }
         }
 
-        let token_refs: Vec<(&str, f32)> = all_tokens.iter().map(|(t, p)| (t.as_str(), *p)).collect();
-        Ok(tokens_to_words(&token_refs))
+        Ok(heard_words)
     }
 }
 
-/// Joins sub-word tokens into full words and calculates the minimum probability.
 pub fn tokens_to_words(tokens: &[(&str, f32)]) -> Vec<HeardWord> {
     let mut heard_words = Vec::new();
     let mut current_word = String::new();
@@ -102,7 +101,6 @@ pub fn tokens_to_words(tokens: &[(&str, f32)]) -> Vec<HeardWord> {
     heard_words
 }
 
-/// Reads a WAV file and strictly enforces 16kHz, mono, and 16-bit/32-bit format.
 pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
     let mut reader = hound::WavReader::open(path).map_err(|e| format!("Failed to open WAV file: {}", e))?;
     let spec = reader.spec();
@@ -163,7 +161,7 @@ mod tests {
         let words = tokens_to_words(&tokens);
         assert_eq!(words.len(), 2);
         assert_eq!(words[0].word, "civilization");
-        assert_eq!(words[0].p, Some(0.4)); // Minimum probability check
+        assert_eq!(words[0].p, Some(0.4));
         assert_eq!(words[1].word, "test");
         assert_eq!(words[1].p, Some(0.95));
     }
