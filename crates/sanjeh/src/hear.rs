@@ -48,58 +48,54 @@ impl WhisperModel {
             }
         }
 
-        // Borrow slice references for token-to-word joining
         let token_refs: Vec<(&str, f32)> = all_tokens.iter().map(|(t, p)| (t.as_str(), *p)).collect();
-
         Ok(tokens_to_words(&token_refs))
     }
 }
 
-/// Joins sub-word tokens into full words and calculates average probability.
+/// Joins sub-word tokens into full words and calculates the minimum probability.
 pub fn tokens_to_words(tokens: &[(&str, f32)]) -> Vec<HeardWord> {
     let mut heard_words = Vec::new();
     let mut current_word = String::new();
-    let mut current_probs = Vec::new();
+    let mut current_min_p = 1.0f32;
+    let mut has_tokens = false;
 
     for &(text, prob) in tokens {
         if text.is_empty() || text.starts_with('[') {
             continue;
         }
 
-        // In Whisper, tokens starting with whitespace mark the start of a new word.
         let starts_with_space = text.chars().next().is_some_and(|c| c.is_whitespace());
 
         if starts_with_space && !current_word.is_empty() {
             let word_str = current_word.trim().to_string();
             if !word_str.is_empty() && word_str.chars().any(|c| c.is_alphanumeric()) {
-                let avg_p = if current_probs.is_empty() {
-                    None
-                } else {
-                    Some(current_probs.iter().sum::<f64>() / current_probs.len() as f64)
-                };
+                let p_val = if has_tokens { Some(current_min_p as f64) } else { None };
                 heard_words.push(HeardWord {
                     word: word_str,
-                    p: avg_p,
+                    p: p_val,
                 });
             }
             current_word = text.to_string();
-            current_probs = vec![prob as f64];
+            current_min_p = prob;
+            has_tokens = true;
         } else {
             current_word.push_str(text);
-            current_probs.push(prob as f64);
+            if has_tokens {
+                current_min_p = current_min_p.min(prob);
+            } else {
+                current_min_p = prob;
+                has_tokens = true;
+            }
         }
     }
 
     let word_str = current_word.trim().to_string();
     if !word_str.is_empty() && word_str.chars().any(|c| c.is_alphanumeric()) {
-        let avg_p = if current_probs.is_empty() {
-            None
-        } else {
-            Some(current_probs.iter().sum::<f64>() / current_probs.len() as f64)
-        };
+        let p_val = if has_tokens { Some(current_min_p as f64) } else { None };
         heard_words.push(HeardWord {
             word: word_str,
-            p: avg_p,
+            p: p_val,
         });
     }
 
@@ -107,12 +103,10 @@ pub fn tokens_to_words(tokens: &[(&str, f32)]) -> Vec<HeardWord> {
 }
 
 /// Reads a WAV file and strictly enforces 16kHz, mono, and 16-bit/32-bit format.
-/// Returns audio samples normalized to [-1.0, 1.0] for Whisper.
 pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
     let mut reader = hound::WavReader::open(path).map_err(|e| format!("Failed to open WAV file: {}", e))?;
     let spec = reader.spec();
 
-    // 1. Strict check for Mono (1 channel)
     if spec.channels != 1 {
         return Err(format!(
             "Unsupported audio: expected 1 channel (mono), got {}. Please convert the file.",
@@ -120,7 +114,6 @@ pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
         ));
     }
 
-    // 2. Strict check for 16 kHz sample rate
     if spec.sample_rate != 16000 {
         return Err(format!(
             "Unsupported audio: expected 16000 Hz sample rate, got {} Hz. Please convert the file.",
@@ -130,7 +123,6 @@ pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
 
     let mut audio_samples = Vec::new();
 
-    // 3. Strict check for Bit Depth (refuse 24-bit which causes silence)
     match spec.sample_format {
         hound::SampleFormat::Int => {
             if spec.bits_per_sample != 16 {
@@ -141,7 +133,7 @@ pub fn read_audio_for_whisper(path: &str) -> Result<Vec<f32>, String> {
             }
             for sample in reader.samples::<i16>() {
                 let s = sample.map_err(|e| format!("Failed to read audio sample: {}", e))?;
-                audio_samples.push(s as f32 / 32768.0); // Normalize to [-1.0, 1.0]
+                audio_samples.push(s as f32 / 32768.0);
             }
         }
         hound::SampleFormat::Float => {
@@ -167,11 +159,12 @@ mod tests {
 
     #[test]
     fn test_tokens_to_words() {
-        // Test merging subword tokens like "civil" + "ization"
-        let tokens = vec![(" civil", 0.9), ("ization", 0.85), (" test", 0.95)];
+        let tokens = vec![(" civil", 0.9), ("ization", 0.4), (" test", 0.95)];
         let words = tokens_to_words(&tokens);
         assert_eq!(words.len(), 2);
         assert_eq!(words[0].word, "civilization");
+        assert_eq!(words[0].p, Some(0.4)); // Minimum probability check
         assert_eq!(words[1].word, "test");
+        assert_eq!(words[1].p, Some(0.95));
     }
 }

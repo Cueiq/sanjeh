@@ -205,13 +205,13 @@ fn run(args: &[String]) -> Result<(), String> {
 
             #[cfg(feature = "hear")]
             {
-                let model_path = option(args, "--model").unwrap_or("models/tiny.en.bin");
+                let model_path = option(args, "--model").unwrap_or("models/ggml-tiny.en.bin");
 
                 let mut clips = vec![];
                 let mut iter = args.iter().skip(2);
                 while let Some(arg) = iter.next() {
                     if arg == "--model" {
-                        iter.next(); // Skip the model path
+                        iter.next();
                     } else if !arg.starts_with("--") {
                         clips.push(arg);
                     }
@@ -224,13 +224,15 @@ fn run(args: &[String]) -> Result<(), String> {
                 println!("Loading Whisper model from: {}", model_path);
                 let model = sanjeh::hear::WhisperModel::load(model_path)?;
 
+                let mut has_error = false;
                 for clip_path in clips {
                     println!("\nProcessing clip: {}", clip_path);
 
                     let samples = match sanjeh::hear::read_audio_for_whisper(clip_path) {
                         Ok(s) => s,
                         Err(e) => {
-                            eprintln!("Skipping {}: {}", clip_path, e);
+                            eprintln!("Error reading {}: {}", clip_path, e);
+                            has_error = true;
                             continue;
                         }
                     };
@@ -242,8 +244,15 @@ fn run(args: &[String]) -> Result<(), String> {
                                 println!("- {} (p: {:.2})", w.word, w.p.unwrap_or(0.0));
                             }
                         }
-                        Err(e) => eprintln!("Error running whisper: {}", e),
+                        Err(e) => {
+                            eprintln!("Error running whisper on {}: {}", clip_path, e);
+                            has_error = true;
+                        }
                     }
+                }
+
+                if has_error {
+                    return Err("some audio clips failed to process".into());
                 }
                 return Ok(());
             }
