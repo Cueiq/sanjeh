@@ -2,12 +2,13 @@
 //! it can be practised and what to say about it.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use crate::connected::{connected_speech, line_words, melts};
 use crate::levels::{Level, word_level};
 use crate::{Pronounced, pronounce, readings};
 
-use super::heard::{Hearing, WordKind, hearing};
+use super::heard::{Heard, Hearing, WordKind, hearing};
 use super::{Entry, LineInput, Reason, Skill, WhyNot};
 
 /// A line's features by name, the numbers a model weighs. Their names are
@@ -154,6 +155,18 @@ fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
 
 const IPA_VOWELS: &str = "aeiouæɑɒɔəɚɛɜɝɪʊʌɐᵻy";
 
+/// Hard-sound categories for each learner's first language.
+static HARD_SOUND_PROFILES: LazyLock<BTreeMap<String, Vec<String>>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../../../data/line/hard-sounds.json"))
+        .expect("hard-sound profiles must be valid")
+});
+
+/// The hard sounds to use for a learner's first language.
+fn hard_sound_profile(language: Option<&str>) -> &'static [String] {
+    let language = language.unwrap_or("fa");
+    HARD_SOUND_PROFILES.get(language).map(Vec::as_slice).unwrap_or(&[])
+}
+
 /// How many syllables a word has: its sound's vowels, or its spelling's.
 fn syllables(word: &str, accent: crate::Accent) -> usize {
     let count = |text: &str, vowels: &str| {
@@ -188,19 +201,42 @@ fn w_readings(word: &str) -> Vec<String> {
     out
 }
 
-fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
+/// Returns the speech duration from word timings, when available.
+fn heard_duration_ms(heard: &Heard) -> Option<u32> {
+    for words in [&heard.small, &heard.base, &heard.tiny] {
+        let (Some(first), Some(last)) = (words.first(), words.last()) else {
+            continue;
+        };
+
+        let (Some(start_ms), Some(end_ms)) = (first.start_ms, last.end_ms) else {
+            continue;
+        };
+
+        if end_ms > start_ms {
+            return Some(end_ms - start_ms);
+        }
+    }
+
+    None
+}
+
+fn hard_sounds_of(word: &str, accent: crate::Accent, enabled: &[String]) -> Vec<String> {
     let Some(sound) = ipa(word, accent) else { return vec![] };
     let sound: String = sound.chars().filter(|c| !matches!(c, 'ˈ' | 'ˌ')).collect();
     let mut found = vec![];
     let mut chars = sound.chars();
-    if chars.next() == Some('s') && chars.next().is_some_and(|c| "ptkmnlw".contains(c)) {
+    if enabled.iter().any(|s| s == "s-cluster")
+        && chars.next() == Some('s')
+        && chars.next().is_some_and(|c| "ptkmnlw".contains(c))
+    {
         found.push("s-cluster".to_string());
     }
     let common_th = ["the", "this", "that", "they", "them", "there", "then", "than"];
-    if (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word) {
+    if enabled.iter().any(|s| s == "th") && (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word)
+    {
         found.push("th".to_string());
     }
-    if sound.contains('w') {
+    if enabled.iter().any(|s| s == "w") && sound.contains('w') {
         found.push("w".to_string());
     }
     let tail = sound
@@ -208,7 +244,7 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
         .rev()
         .take_while(|c| !IPA_VOWELS.contains(*c) && *c != 'ː')
         .count();
-    if tail >= 3 {
+    if enabled.iter().any(|s| s == "end-cluster") && tail >= 3 {
         found.push("end-cluster".to_string());
     }
     found
@@ -217,11 +253,12 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
 /// The facts of a line.
 pub fn facts(input: &LineInput) -> Facts {
     let text = input.text.trim();
+    let spoken_text = super::numbers::expand_numbers(text);
     let accent = input.accent;
-    let ranges = line_words(text);
+    let ranges = line_words(&spoken_text);
     let tokens: Vec<String> = ranges
         .iter()
-        .map(|r| text[r.clone()].to_lowercase().replace('’', "'"))
+        .map(|r| spoken_text[r.clone()].to_lowercase().replace('’', "'"))
         .collect();
     let known_names: Vec<String> = input.names.iter().map(|n| n.to_lowercase()).collect();
 
@@ -230,11 +267,13 @@ pub fn facts(input: &LineInput) -> Facts {
     let capital: Vec<bool> = ranges
         .iter()
         .map(|r| {
-            let word = &text[r.clone()];
-            let before = text[..r.start].trim_end();
+            let word = &spoken_text[r.clone()];
+            let before = spoken_text[..r.start].trim_end();
+            let sentence_start = before.chars().last().is_none_or(|c| ".?!-\"“…".contains(c));
+
             word.starts_with(char::is_uppercase)
                 && !matches!(word, "I" | "I'm" | "I'll" | "I've" | "I'd" | "OK")
-                && before.chars().last().is_some_and(|c| !".?!-\"“…".contains(c))
+                && (!sentence_start || word_level(&word.to_lowercase()).is_none())
         })
         .collect();
     let said_wrong: Vec<String> = tokens
@@ -305,10 +344,16 @@ pub fn facts(input: &LineInput) -> Facts {
         vocab -= 0.5;
     }
 
+    let duration_ms = input
+        .heard
+        .as_ref()
+        .and_then(heard_duration_ms)
+        .unwrap_or(input.duration_ms);
+
     // Sound.
     let syllable_count: usize = tokens.iter().map(|t| syllables(t, accent)).sum();
-    let seconds = (input.duration_ms.max(400) as f64) / 1000.0;
-    let found = melts(text, accent);
+    let seconds = (duration_ms.max(400) as f64) / 1000.0;
+    let found = melts(&spoken_text, accent);
     let melt_list: Vec<(String, String, String)> = found
         .iter()
         .filter_map(|m| {
@@ -316,7 +361,7 @@ pub fn facts(input: &LineInput) -> Facts {
             let last = ranges.get(m.words.end.checked_sub(1)?)?;
             Some((
                 m.rule.to_string(),
-                text[first.start..last.end].to_string(),
+                spoken_text[first.start..last.end].to_string(),
                 m.sound.clone(),
             ))
         })
@@ -331,11 +376,17 @@ pub fn facts(input: &LineInput) -> Facts {
                 .map(|f| (t.clone(), f.words.clone()))
         })
         .collect();
+    let enabled_hard_sounds = hard_sound_profile(input.language.as_deref());
+
     let hard_sounds: Vec<(String, String)> = tokens
         .iter()
         .enumerate()
         .filter(|(at, _)| !is_name[*at])
-        .flat_map(|(_, t)| hard_sounds_of(t, accent).into_iter().map(move |s| (s, t.clone())))
+        .flat_map(|(_, t)| {
+            hard_sounds_of(t, accent, enabled_hard_sounds)
+                .into_iter()
+                .map(move |s| (s, t.clone()))
+        })
         .collect();
     let ear_melts = melt_list
         .iter()
@@ -414,7 +465,7 @@ pub fn facts(input: &LineInput) -> Facts {
         tokens,
         whole_sentence,
         voices: input.voices,
-        duration_ms: input.duration_ms,
+        duration_ms,
         syllables: syllable_count,
         names,
         said_wrong,

@@ -18,7 +18,11 @@ A JSON Lines file, an item a line (`sanjeh::bench`):
 
 - `input` is what `sanjeh::line::measure` takes (`LineInput`). `heard` is
   optional: each word whisper's tiny, base and small English models heard
-  in the line's clip, with the model's confidence (`p`).
+  in the line's clip, with the model's confidence (`p`). Each heard word
+  may also have optional `start_ms` and `end_ms` timestamps, in milliseconds
+  from the beginning of the audio. When valid word timings are available,
+  the line's speech duration is measured from the first word's start to the
+  last word's end; otherwise, `duration_ms` is used.
 - A label is one rater's view, **for themselves**: the line was `easy`,
   `right` or `hard` for them, and worth practising (`yes`, `meh`, `no`).
   Their own level turns that into the line's: a B2 rater's `right` is a B2

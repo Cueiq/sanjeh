@@ -89,6 +89,22 @@ static LISTED: LazyLock<Vec<(String, String, Level)>> = LazyLock::new(|| {
     listed
 });
 
+/// Number words and the levels the vocabulary lists give them.
+static NUMBER_WORDS: LazyLock<HashMap<String, Level>> = LazyLock::new(|| {
+    let mut numbers = HashMap::new();
+
+    for (head, pos, level) in LISTED.iter() {
+        if pos != "number" {
+            continue;
+        }
+
+        let at = numbers.entry(head.clone()).or_insert(*level);
+        *at = (*at).min(*level);
+    }
+
+    numbers
+});
+
 /// Every word the lists have, and every form its part of speech takes by
 /// the spelling rules — a noun's plural, a verb's *-s*, *-ed* and *-ing*,
 /// an adjective's *-er* and *-est* — and the irregular forms below, each at
@@ -313,6 +329,21 @@ const SUFFIXES: &[(&str, &str)] = &[
     ("ful", ""),
 ];
 
+/// The level of a hyphenated number whose components are listed as numbers.
+/// Take the hardest component's level.
+fn hyphenated_number_level(word: &str) -> Option<Level> {
+    let mut parts = word.split('-');
+    let mut level = *NUMBER_WORDS.get(parts.next()?)?;
+    let mut hyphenated = false;
+
+    for part in parts {
+        level = level.max(*NUMBER_WORDS.get(part)?);
+        hyphenated = true;
+    }
+
+    hyphenated.then_some(level)
+}
+
 /// The word and the forms it may be listed under: *stopped* → *stop*,
 /// *going* → *go*, *went* → *go*.
 pub fn base_forms(word: &str) -> Vec<String> {
@@ -336,14 +367,19 @@ pub fn base_forms(word: &str) -> Vec<String> {
     forms
 }
 
-/// The level a word is listed at, by its lowest-listed form; `None` for a
-/// word the lists don't have (a name, slang, a rare word).
+/// The level of a word by its lowest-listed form, or of a hyphenated
+/// number by the highest level of its components.
+/// `None` for a word the lists don't have (a name, slang, a rare word).
 pub fn word_level(word: &str) -> Option<Level> {
-    base_forms(word)
-        .iter()
-        .filter_map(|form| WORDS.get(form))
-        .min()
-        .copied()
+    let word = word.to_lowercase();
+
+    hyphenated_number_level(&word).or_else(|| {
+        base_forms(&word)
+            .iter()
+            .filter_map(|form| WORDS.get(form))
+            .min()
+            .copied()
+    })
 }
 
 #[cfg(test)]
@@ -381,5 +417,17 @@ mod tests {
         assert_eq!(Level::of_rank(4.0), Level::B2);
         assert_eq!(Level::of_rank(0.2), Level::A1);
         assert_eq!(Level::of_rank(9.0), Level::C2);
+    }
+
+    #[test]
+    fn hyphenated_number_words_take_the_level_of_their_hardest_part() {
+        assert_eq!(word_level("ninety"), Some(Level::A1));
+        assert_eq!(word_level("nine"), Some(Level::A1));
+        assert_eq!(word_level("ninety-nine"), Some(Level::A1));
+        assert_eq!(word_level("twenty-one"), Some(Level::A1));
+        assert_eq!(word_level("one-hundred"), Some(Level::A2));
+
+        // Ordinary hyphenated words must retain their existing level.
+        assert_eq!(word_level("first-floor"), Some(Level::B1));
     }
 }

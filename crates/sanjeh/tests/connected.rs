@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 
 use sanjeh::Accent;
-use sanjeh::connected::{RuleAccent, Sounds, connected_speech};
+use sanjeh::connected::{RuleAccent, Sounds, connected_speech, line_words, melts};
 
 const RULES: [&str; 12] = [
     "linking",
@@ -129,7 +129,11 @@ fn the_word_lists_are_whole_and_the_examples_in_them() {
     }
     for fusion in &data.fusions {
         assert!(has_both(&fusion.ipa) && !fusion.sound.is_empty(), "{}", fusion.words);
-        assert!(fusion.words.contains(' '), "{}: two words or more", fusion.words);
+        assert!(
+            !fusion.words.is_empty() && fusion.words.split(' ').all(|word| !word.is_empty()),
+            "{}: fusion words must be non-empty and separated by single spaces",
+            fusion.words
+        );
     }
     // A fusion's examples are fusions on the list, and a weak form's have a
     // word on it.
@@ -139,5 +143,57 @@ fn the_word_lists_are_whole_and_the_examples_in_them() {
     for example in &data.rule("weak-form").expect("weak-form").examples {
         let melt = example.melt.to_lowercase();
         assert!(melt.split(' ').any(|word| weak.contains(word)), "{}", example.melt);
+    }
+}
+
+#[test]
+fn written_single_word_fusions_are_found() {
+    let cases = [
+        ("kinda", "kinda"),
+        ("sorta", "sorta"),
+        ("dunno", "dunno"),
+        ("lemme", "lemme"),
+        ("gimme", "gimme"),
+        ("c'mon", "c'mon"),
+        ("cannot", "cannot"),
+        ("'cause", "'cause"),
+        ("'em", "'em"),
+    ];
+
+    for (input, expected_sound) in cases {
+        for accent in [Accent::Us, Accent::Gb] {
+            let results = melts(input, accent);
+            let fusion = results
+                .iter()
+                .find(|melt| melt.rule == "fusion")
+                .unwrap_or_else(|| panic!("{input}: fusion not found for {accent:?}"));
+
+            assert_eq!(fusion.sound, expected_sound, "{input}, {accent:?}");
+            assert!(!fusion.ipa.is_empty(), "{input}, {accent:?}: empty IPA");
+        }
+    }
+}
+
+#[test]
+fn leading_apostrophe_fusions_keep_their_apostrophe() {
+    for input in ["'cause", "'em"] {
+        let words = line_words(input);
+
+        assert_eq!(words.len(), 1, "{input}");
+        assert_eq!(&input[words[0].clone()], input, "{input}");
+    }
+
+    for input in ["'emergency", "'hello'"] {
+        let words = line_words(input);
+
+        assert_eq!(
+            words.iter().map(|range| &input[range.clone()]).collect::<Vec<_>>(),
+            if input == "'emergency" {
+                vec!["emergency"]
+            } else {
+                vec!["hello"]
+            },
+            "{input}"
+        );
     }
 }

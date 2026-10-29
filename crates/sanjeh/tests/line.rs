@@ -1,10 +1,19 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
-use sanjeh::line::{LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
+use sanjeh::line::{Heard, HeardWord, LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
 
 fn line(text: &str, ms: u32) -> LineInput {
     serde_json::from_value(serde_json::json!({ "text": text, "duration_ms": ms })).unwrap()
+}
+
+fn heard_word(word: &str, start_ms: Option<u32>, end_ms: Option<u32>) -> HeardWord {
+    HeardWord {
+        word: word.to_string(),
+        p: Some(0.9),
+        start_ms,
+        end_ms,
+    }
 }
 
 #[test]
@@ -25,6 +34,17 @@ fn words_said_wrong_on_purpose_have_no_answer_to_hold_to() {
 }
 
 #[test]
+fn a_real_slang_word_is_not_marked_as_said_wrong() {
+    let f = facts(&line("That was a screwy situation.", 3000));
+
+    assert!(
+        !f.said_wrong.iter().any(|word| word == "screwy"),
+        "a real slang word should not be marked as said wrong: {:?}",
+        f.said_wrong
+    );
+}
+
+#[test]
 fn a_pair_written_as_said_and_its_melts_are_reasons() {
     let f = facts(&line("Hey, guys, I'm gonna throw something out there.", 2400));
     let reasons = f.reasons(Skill::Ear);
@@ -38,6 +58,112 @@ fn a_pair_written_as_said_and_its_melts_are_reasons() {
             .any(|r| matches!(r, Reason::Melt { rule, .. } if rule == "g-dropping"))
     );
     assert_eq!(f.features["words"], 8.0);
+}
+
+#[test]
+fn leading_apostrophe_fusions_are_reasons_in_line_analysis() {
+    for text in ["I did it 'cause I could.", "Tell 'em what happened."] {
+        let f = facts(&line(text, 3000));
+        let reasons = f.reasons(Skill::Ear);
+
+        assert!(
+            reasons
+                .iter()
+                .any(|reason| matches!(reason, Reason::Melt { rule, .. } if rule == "fusion")),
+            "{text}: expected a fusion reason"
+        );
+    }
+}
+
+#[test]
+fn a_hyphenated_number_is_not_a_hard_word() {
+    let f = facts(&line("I paid ninety-nine dollars in nineteen ninety-nine.", 3500));
+
+    assert!(
+        f.hard_words.iter().all(|(word, _)| word != "ninety-nine"),
+        "number words should not be treated as rare: {:?}",
+        f.hard_words
+    );
+}
+
+#[test]
+fn numeric_literals_are_measured_as_spoken_words() {
+    let examples = [
+        ("I paid 10,000 dollars.", "I paid ten thousand dollars."),
+        ("I was born in 1999.", "I was born in nineteen ninety-nine."),
+        ("She finished 1st.", "She finished first."),
+        ("Meet me at 9:30.", "Meet me at nine thirty."),
+    ];
+
+    for (numeric, written_out) in examples {
+        let numeric_facts = facts(&line(numeric, 3000));
+        let written_facts = facts(&line(written_out, 3000));
+
+        assert_eq!(
+            numeric_facts.tokens, written_facts.tokens,
+            "tokens differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.syllables, written_facts.syllables,
+            "syllables differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["words"], written_facts.features["words"],
+            "word counts differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["hard_words"], written_facts.features["hard_words"],
+            "hard word counts differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.features["common"], written_facts.features["common"],
+            "common word shares differ for {numeric:?}"
+        );
+        assert_eq!(
+            numeric_facts.whole_sentence, written_facts.whole_sentence,
+            "sentence validity differs for {numeric:?}"
+        );
+    }
+}
+
+#[test]
+fn speech_duration_uses_word_timings_when_available() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(1000), Some(1200)),
+            heard_word("can", Some(1200), Some(1600)),
+            heard_word("do", Some(1600), Some(2000)),
+            heard_word("it", Some(2200), Some(2500)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 1500);
+    assert_eq!(f.features["sps"], f.syllables as f64 / 1.5);
+}
+
+#[test]
+fn speech_duration_falls_back_to_subtitle_duration() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(2500), Some(2600)),
+            heard_word("can", Some(2600), Some(2700)),
+            heard_word("do", Some(2700), Some(2800)),
+            heard_word("it", Some(2800), Some(1000)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 5000);
+    assert_eq!(f.features["sps"], f.syllables as f64 / 5.0);
 }
 
 #[test]
@@ -82,4 +208,51 @@ fn a_word_read_two_ways_still_has_its_hard_sounds() {
             .any(|(sound, word)| sound == "th" && word == "with")
     );
     assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}
+
+#[test]
+fn persian_hard_sounds_are_used_when_language_is_explicit() {
+    let mut input = line("There are no bad situations as long as I'm with you.", 4700);
+    input.language = Some("fa".to_string());
+
+    let f = facts(&input);
+
+    assert!(
+        f.hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "with")
+    );
+    assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}
+
+#[test]
+fn an_unknown_language_does_not_use_the_persian_profile() {
+    let mut input = line("There are no bad situations as long as I'm with you.", 4700);
+    input.language = Some("unknown".to_string());
+
+    let f = facts(&input);
+
+    assert!(f.hard_sounds.is_empty());
+}
+
+#[test]
+fn a_proper_name_at_sentence_start_is_not_a_hard_word() {
+    let f = facts(&line("Elizabeth arrived at the station.", 2500));
+
+    assert_eq!(f.names, ["elizabeth"]);
+    assert!(f.hard_words.iter().all(|(w, _)| w != "elizabeth"));
+}
+
+#[test]
+fn a_common_word_at_sentence_start_is_not_a_name() {
+    let f = facts(&line("Maybe we should leave now.", 2500));
+
+    assert!(f.names.is_empty());
+}
+
+#[test]
+fn language_defaults_to_none_for_older_inputs() {
+    let input = line("There are no bad situations.", 2500);
+
+    assert_eq!(input.language, None);
 }

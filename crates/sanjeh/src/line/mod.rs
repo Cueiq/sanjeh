@@ -13,10 +13,13 @@
 //! Beside them come the **reasons**, what makes the line hard and what makes
 //! it worth it, in a form an app can put in words.
 
+mod cue;
 mod features;
 pub mod heard;
 mod model;
+mod numbers;
 
+pub use cue::{PreparedCue, prepare_cue};
 use serde::{Deserialize, Serialize};
 
 pub use features::{Facts, Features, facts};
@@ -33,11 +36,15 @@ pub struct LineInput {
     /// notes for the deaf (*(CHUCKLES)*, *STUART:*). A sentence that runs
     /// over two subtitles is one line.
     pub text: String,
-    /// How long it is said for.
+    /// How long the subtitle lasts, in milliseconds; used as the speech
+    /// duration when word timings are unavailable.
     pub duration_ms: u32,
     /// The accent it is said in, for its melts and sounds.
     #[serde(default = "american")]
     pub accent: Accent,
+    /// The learner's first language, for language-specific hard sounds.
+    #[serde(default)]
+    pub language: Option<String>,
     /// How many people say it: two (`- What? - Nothing.`) can't be practised.
     #[serde(default = "one")]
     pub voices: u8,

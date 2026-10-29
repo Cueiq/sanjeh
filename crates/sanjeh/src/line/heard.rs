@@ -22,6 +22,12 @@ pub struct HeardWord {
     pub word: String,
     #[serde(default)]
     pub p: Option<f64>,
+    /// When the word starts, in milliseconds from the beginning of the audio.
+    #[serde(default)]
+    pub start_ms: Option<u32>,
+    /// When the word ends, in milliseconds from the beginning of the audio.
+    #[serde(default)]
+    pub end_ms: Option<u32>,
 }
 
 /// What a line's words came to with the three ears.
@@ -255,6 +261,8 @@ mod tests {
             .map(|w| HeardWord {
                 word: w.to_string(),
                 p: Some(0.9),
+                start_ms: None,
+                end_ms: None,
             })
             .collect()
     }

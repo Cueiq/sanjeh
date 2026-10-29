@@ -238,9 +238,18 @@
     { "words": "let me", "sound": "lemme", "ipa": { "us": "ˈlemi", "gb": "ˈlemi" } },
     { "words": "give me", "sound": "gimme", "ipa": { "us": "ˈgɪmi", "gb": "ˈgɪmi" } },
     { "words": "don't know", "sound": "dunno", "ipa": { "us": "dəˈnoʊ", "gb": "dəˈnəʊ" } },
+    { "words": "kinda", "sound": "kinda", "ipa": { "us": "ˈkaɪndə", "gb": "ˈkaɪndə" } },
+    { "words": "sorta", "sound": "sorta", "ipa": { "us": "ˈsɔːrɾə", "gb": "ˈsɔːtə" } },
+    { "words": "dunno", "sound": "dunno", "ipa": { "us": "dəˈnoʊ", "gb": "dəˈnəʊ" } },
+    { "words": "lemme", "sound": "lemme", "ipa": { "us": "ˈlemi", "gb": "ˈlemi" } },
+    { "words": "gimme", "sound": "gimme", "ipa": { "us": "ˈgɪmi", "gb": "ˈgɪmi" } },
     { "words": "what do you", "sound": "whaddya", "ipa": { "us": "ˈwʌɾəjə", "gb": "ˈwɒdəjə" } },
     { "words": "what are you", "sound": "whatcha", "ipa": { "us": "ˈwʌtʃə", "gb": "ˈwɒtʃə" } },
     { "words": "don't you", "sound": "dontcha", "ipa": { "us": "ˈdoʊntʃə", "gb": "ˈdəʊntʃə" } },
-    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } }
+    { "words": "c'mon", "sound": "c'mon", "ipa": { "us": "kəˈmɑn", "gb": "kəˈmɒn" } },
+    { "words": "cannot", "sound": "cannot", "ipa": { "us": "ˈkænɑt", "gb": "ˈkænɒt" } },
+    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } },
+    { "words": "'cause", "sound": "'cause", "ipa": { "us": "kəz", "gb": "kəz" } },
+    { "words": "'em", "sound": "'em", "ipa": { "us": "əm", "gb": "əm" } }
   ]
 }
