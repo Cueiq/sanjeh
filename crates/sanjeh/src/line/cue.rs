@@ -109,7 +109,7 @@ fn is_sound_annotation(annotation: &str) -> bool {
 fn strip_speaker_labels(text: &str) -> (String, usize) {
     let mut ranges = Vec::new();
     let mut segment_start = 0;
-    let mut voices = 0;
+    let mut voices = std::collections::HashSet::new();
 
     for (index, ch) in text.char_indices() {
         if ch == ':' {
@@ -118,7 +118,7 @@ fn strip_speaker_labels(text: &str) -> (String, usize) {
             if is_speaker_label(segment) {
                 let leading_whitespace = segment.len() - segment.trim_start().len();
                 ranges.push((segment_start + leading_whitespace, index + 1));
-                voices += 1;
+                voices.insert(segment.trim().to_ascii_lowercase());
             }
 
             segment_start = index + ch.len_utf8();
@@ -133,7 +133,7 @@ fn strip_speaker_labels(text: &str) -> (String, usize) {
         result.replace_range(start..end, "");
     }
 
-    (result, voices)
+    (result, voices.len())
 }
 
 fn is_speaker_label(label: &str) -> bool {
@@ -193,6 +193,14 @@ mod tests {
         let prepared = prepare_cue(cue);
 
         assert_eq!(prepared.text, "Hello there.");
+        assert_eq!(prepared.voices, 1);
+    }
+
+    #[test]
+    fn repeated_speaker_label_does_not_mean_two_voices() {
+        let prepared = prepare_cue("STUART: Hello. STUART: What now?");
+
+        assert_eq!(prepared.text, "Hello. What now?");
         assert_eq!(prepared.voices, 1);
     }
 
