@@ -188,6 +188,7 @@ fn run(args: &[String]) -> Result<(), String> {
                 text: prepared.text,
                 duration_ms: ms,
                 accent: accent_of(args),
+                language: None,
                 voices: prepared.voices,
                 heard: None,
                 entries: vec![],

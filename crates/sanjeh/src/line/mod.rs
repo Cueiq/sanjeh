@@ -42,6 +42,9 @@ pub struct LineInput {
     /// The accent it is said in, for its melts and sounds.
     #[serde(default = "american")]
     pub accent: Accent,
+    /// The learner's first language, for language-specific hard sounds.
+    #[serde(default)]
+    pub language: Option<String>,
     /// How many people say it: two (`- What? - Nothing.`) can't be practised.
     #[serde(default = "one")]
     pub voices: u8,

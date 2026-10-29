@@ -213,3 +213,10 @@ fn a_common_word_at_sentence_start_is_not_a_name() {
 
     assert!(f.names.is_empty());
 }
+
+#[test]
+fn language_defaults_to_none_for_older_inputs() {
+    let input = line("There are no bad situations.", 2500);
+
+    assert_eq!(input.language, None);
+}
