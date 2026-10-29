@@ -161,8 +161,16 @@ mod tests {
         let words = tokens_to_words(&tokens);
         assert_eq!(words.len(), 2);
         assert_eq!(words[0].word, "civilization");
-        assert_eq!(words[0].p, Some(0.4));
+        assert!(
+            (words[0].p.unwrap() - 0.4).abs() < 1e-5,
+            "expected ~0.4, got {:?}",
+            words[0].p
+        );
         assert_eq!(words[1].word, "test");
-        assert_eq!(words[1].p, Some(0.95));
+        assert!(
+            (words[1].p.unwrap() - 0.95).abs() < 1e-5,
+            "expected ~0.95, got {:?}",
+            words[1].p
+        );
     }
 }
