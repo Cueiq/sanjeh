@@ -2,6 +2,7 @@
 //! it can be practised and what to say about it.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use crate::connected::{connected_speech, line_words, melts};
 use crate::levels::{Level, word_level};
@@ -154,6 +155,18 @@ fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
 
 const IPA_VOWELS: &str = "aeiouæɑɒɔəɚɛɜɝɪʊʌɐᵻy";
 
+/// Hard-sound categories for each learner's first language.
+static HARD_SOUND_PROFILES: LazyLock<BTreeMap<String, Vec<String>>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../../../data/line/hard-sounds.json"))
+        .expect("hard-sound profiles must be valid")
+});
+
+/// The hard sounds to use for a learner's first language.
+fn hard_sound_profile(language: Option<&str>) -> &'static [String] {
+    let language = language.unwrap_or("fa");
+    HARD_SOUND_PROFILES.get(language).map(Vec::as_slice).unwrap_or(&[])
+}
+
 /// How many syllables a word has: its sound's vowels, or its spelling's.
 fn syllables(word: &str, accent: crate::Accent) -> usize {
     let count = |text: &str, vowels: &str| {
@@ -207,19 +220,23 @@ fn heard_duration_ms(heard: &Heard) -> Option<u32> {
     None
 }
 
-fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
+fn hard_sounds_of(word: &str, accent: crate::Accent, enabled: &[String]) -> Vec<String> {
     let Some(sound) = ipa(word, accent) else { return vec![] };
     let sound: String = sound.chars().filter(|c| !matches!(c, 'ˈ' | 'ˌ')).collect();
     let mut found = vec![];
     let mut chars = sound.chars();
-    if chars.next() == Some('s') && chars.next().is_some_and(|c| "ptkmnlw".contains(c)) {
+    if enabled.iter().any(|s| s == "s-cluster")
+        && chars.next() == Some('s')
+        && chars.next().is_some_and(|c| "ptkmnlw".contains(c))
+    {
         found.push("s-cluster".to_string());
     }
     let common_th = ["the", "this", "that", "they", "them", "there", "then", "than"];
-    if (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word) {
+    if enabled.iter().any(|s| s == "th") && (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word)
+    {
         found.push("th".to_string());
     }
-    if sound.contains('w') {
+    if enabled.iter().any(|s| s == "w") && sound.contains('w') {
         found.push("w".to_string());
     }
     let tail = sound
@@ -227,7 +244,7 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
         .rev()
         .take_while(|c| !IPA_VOWELS.contains(*c) && *c != 'ː')
         .count();
-    if tail >= 3 {
+    if enabled.iter().any(|s| s == "end-cluster") && tail >= 3 {
         found.push("end-cluster".to_string());
     }
     found
@@ -359,11 +376,17 @@ pub fn facts(input: &LineInput) -> Facts {
                 .map(|f| (t.clone(), f.words.clone()))
         })
         .collect();
+    let enabled_hard_sounds = hard_sound_profile(input.language.as_deref());
+
     let hard_sounds: Vec<(String, String)> = tokens
         .iter()
         .enumerate()
         .filter(|(at, _)| !is_name[*at])
-        .flat_map(|(_, t)| hard_sounds_of(t, accent).into_iter().map(move |s| (s, t.clone())))
+        .flat_map(|(_, t)| {
+            hard_sounds_of(t, accent, enabled_hard_sounds)
+                .into_iter()
+                .map(move |s| (s, t.clone()))
+        })
         .collect();
     let ear_melts = melt_list
         .iter()

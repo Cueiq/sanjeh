@@ -200,6 +200,31 @@ fn a_word_read_two_ways_still_has_its_hard_sounds() {
 }
 
 #[test]
+fn persian_hard_sounds_are_used_when_language_is_explicit() {
+    let mut input = line("There are no bad situations as long as I'm with you.", 4700);
+    input.language = Some("fa".to_string());
+
+    let f = facts(&input);
+
+    assert!(
+        f.hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "with")
+    );
+    assert!(f.hard_sounds.iter().any(|(sound, word)| sound == "w" && word == "with"));
+}
+
+#[test]
+fn an_unknown_language_does_not_use_the_persian_profile() {
+    let mut input = line("There are no bad situations as long as I'm with you.", 4700);
+    input.language = Some("unknown".to_string());
+
+    let f = facts(&input);
+
+    assert!(f.hard_sounds.is_empty());
+}
+
+#[test]
 fn a_proper_name_at_sentence_start_is_not_a_hard_word() {
     let f = facts(&line("Elizabeth arrived at the station.", 2500));
 
