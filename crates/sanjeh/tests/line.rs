@@ -113,3 +113,12 @@ fn test_split_voices_fallback_on_bad_split() {
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].text, "Just a single line without dash");
 }
+#[test]
+fn test_split_voices_keeps_hyphenated_words() {
+    let mut cue = line("- That is a well-known fact. - I know.", 3000);
+    cue.voices = 2;
+    let parts = split_voices(&cue);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].text, "That is a well-known fact.");
+    assert_eq!(parts[1].text, "I know.");
+}

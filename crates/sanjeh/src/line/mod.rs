@@ -211,19 +211,32 @@ pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
     }
 
     let text = input.text.trim();
+    let mut parts = Vec::new();
+    let mut start = 0;
+    let mut prev_ws = true;
 
-    let parts: Vec<&str> = text
-        .split(['-', '—'])
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect();
+    for (i, c) in text.char_indices() {
+        if c == '—' || (c == '-' && prev_ws) {
+            let piece = text[start..i].trim();
+            if !piece.is_empty() {
+                parts.push(piece);
+            }
+            start = i + c.len_utf8();
+        }
+        prev_ws = c.is_whitespace();
+    }
+
+    let tail = text[start..].trim();
+    if !tail.is_empty() {
+        parts.push(tail);
+    }
 
     let parts_len = parts.len();
     if parts_len < 2 {
         return vec![input.clone()];
     }
 
-    let mut outputs = vec![];
+    let mut outputs = Vec::with_capacity(parts_len);
 
     for part_text in parts {
         let part_words = crate::connected::line_words(part_text);
@@ -231,7 +244,7 @@ pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
             continue;
         }
 
-        let part_input = LineInput {
+        outputs.push(LineInput {
             text: part_text.to_string(),
             duration_ms: input.duration_ms / parts_len as u32,
             accent: input.accent,
@@ -239,12 +252,10 @@ pub fn split_voices(input: &LineInput) -> Vec<LineInput> {
             heard: input.heard.clone(),
             entries: input.entries.clone(),
             names: input.names.clone(),
-        };
-
-        outputs.push(part_input);
+        });
     }
 
-    if outputs.len() < 2 {
+    if outputs.len() != parts_len {
         return vec![input.clone()];
     }
 
