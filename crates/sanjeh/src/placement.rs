@@ -82,6 +82,17 @@ impl Prior {
     }
 }
 
+/// Why an estimate can't be made from what it was given.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PlacementError {
+    /// The prior's mean isn't finite, or its SD isn't positive and finite:
+    /// every answer would weigh NaN and the level would be meaningless.
+    BadPrior,
+    /// An answer is for an item the bank doesn't have: a typo, or an answer
+    /// from another version of the bank. Dropping it silently would lose it.
+    UnknownItem(String),
+}
+
 /// When a part of the test stops: once the standard error is below `se`, or
 /// after `most` items, and never before `fewest`, so one lucky answer can't
 /// end it. The numbers are set from simulation.
@@ -117,25 +128,49 @@ impl Item {
         1.0 / (1.0 + (-z).exp())
     }
 
-    /// Fisher Information of the item at ability `theta`: a^2 * p * (1 - p) * words.
+    /// How much an answer to this item tells about a learner of ability
+    /// `theta`: a² · p · (1 − p), the Fisher information of one chance to be
+    /// right. It is highest where the odds are even (p = ½). The words of a
+    /// line are not counted here: `estimate` already counts them, as that
+    /// many trials, and choosing by them would favour a long line that is too
+    /// hard over a shorter one at the learner's level.
     #[inline]
     pub fn information(&self, theta: f64) -> f64 {
         let p = self.p(theta);
-        let q = 1.0 - p;
         let a = self.discrimination;
-        (a * a) * p * q * (self.words as f64)
+        a * a * p * (1.0 - p)
     }
 }
 
 /// EAP (Expected A Posteriori) estimation over a grid of theta.
 /// Grid of 121 points from -1.0 to 8.0 on the CEFR-lined scale with normal prior.
-pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Estimate {
+///
+/// A prior whose mean isn't finite, or whose SD isn't positive and finite,
+/// is refused with `PlacementError::BadPrior`. An answer for an item the
+/// bank doesn't have is refused with `PlacementError::UnknownItem`. An
+/// answer with more words right than asked counts as all right.
+pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimate, PlacementError> {
     const GRID_SIZE: usize = 121;
     const MIN_THETA: f64 = -1.0;
     const MAX_THETA: f64 = 8.0;
     const STEP: f64 = (MAX_THETA - MIN_THETA) / ((GRID_SIZE - 1) as f64);
 
     let grid_thetas: [f64; GRID_SIZE] = std::array::from_fn(|i| MIN_THETA + (i as f64) * STEP);
+
+    if !prior.mean.is_finite() || !(prior.sd.is_finite() && prior.sd > 0.0) {
+        return Err(PlacementError::BadPrior);
+    }
+
+    // Each answer's item is looked up once, here, and not again for every
+    // point of the grid: with a big bank that was most of the time spent.
+    let mut counted: Vec<(&Item, f64, f64)> = Vec::with_capacity(answers.len());
+    for answer in answers {
+        let item = bank
+            .get(&answer.item)
+            .ok_or_else(|| PlacementError::UnknownItem(answer.item.clone()))?;
+        let right = answer.right.min(answer.of);
+        counted.push((item, right as f64, (answer.of - right) as f64));
+    }
 
     let mut log_posteriors = [0.0; GRID_SIZE];
     let mut max_log_post = f64::NEG_INFINITY;
@@ -145,12 +180,9 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Estimate {
         let log_prior = -0.5 * z * z;
 
         let mut log_lik = 0.0;
-        for ans in answers {
-            if let Some(item) = bank.get(&ans.item) {
-                let p = item.p(theta).clamp(1e-12, 1.0 - 1e-12);
-                let q = (1.0 - p).clamp(1e-12, 1.0 - 1e-12);
-                log_lik += (ans.right as f64) * p.ln() + ((ans.of.saturating_sub(ans.right)) as f64) * q.ln();
-            }
+        for &(item, right, wrong) in &counted {
+            let p = item.p(theta).clamp(1e-12, 1.0 - 1e-12);
+            log_lik += right * p.ln() + wrong * (1.0 - p).ln();
         }
 
         let lp = log_prior + log_lik;
@@ -168,13 +200,6 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Estimate {
         total_weight += w;
     }
 
-    if total_weight <= 0.0 {
-        return Estimate {
-            theta: prior.mean,
-            se: prior.sd,
-        };
-    }
-
     let mut mean_theta = 0.0;
     for (i, &theta) in grid_thetas.iter().enumerate() {
         mean_theta += theta * (weights[i] / total_weight);
@@ -186,10 +211,10 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Estimate {
         var_theta += diff * diff * (weights[i] / total_weight);
     }
 
-    Estimate {
+    Ok(Estimate {
         theta: mean_theta,
         se: var_theta.max(1e-6).sqrt(),
-    }
+    })
 }
 
 /// Simple deterministic hash to pick an index with caller's seed (no hidden randomness).
@@ -203,8 +228,20 @@ fn pseudo_random_index(seed: u64, count: usize) -> usize {
     ((z ^ (z >> 31)) as usize) % count
 }
 
+/// How many of the most informative items `next_item` draws from. The design
+/// says "the best few" and doesn't fix a number: three is a starting value,
+/// small enough that the test stays close to the most informative item and
+/// big enough that learners aren't all given the same one. Simulation (#13)
+/// is meant to set it, as it sets the stopping rule.
+const BEST_FEW: usize = 3;
+
 /// The most informative items at the current theta, one drawn from the best few
 /// with the caller's seed.
+///
+/// How to use the seed: give the same `seed` for the whole test. The number of
+/// items already taken is mixed into it here, so each item gets a fresh draw
+/// and the same seed still gives the same test, item by item. Another seed
+/// gives another test.
 pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item> {
     let mut candidates: Vec<(&Item, f64)> = bank
         .items
@@ -219,8 +256,9 @@ pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task
 
     candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    let pool_size = candidates.len().min(3);
-    let chosen_idx = pseudo_random_index(seed, pool_size);
+    let pool_size = candidates.len().min(BEST_FEW);
+    let draw = seed.wrapping_add((taken.len() as u64).wrapping_mul(0x9e3779b97f4a7c15));
+    let chosen_idx = pseudo_random_index(draw, pool_size);
     Some(candidates[chosen_idx].0)
 }
 
@@ -296,7 +334,7 @@ mod tests {
         let bank = sample_bank();
         let prior = Prior::centred_on(3.0);
 
-        let initial = estimate(&[], &bank, prior);
+        let initial = estimate(&[], &bank, prior).unwrap();
         let answers = vec![
             Answer {
                 item: "item_5".to_string(),
@@ -314,7 +352,7 @@ mod tests {
                 of: 5,
             },
         ];
-        let after = estimate(&answers, &bank, prior);
+        let after = estimate(&answers, &bank, prior).unwrap();
 
         assert!(after.theta > initial.theta);
     }
@@ -324,7 +362,7 @@ mod tests {
         let bank = sample_bank();
         let prior = Prior::centred_on(3.0);
 
-        let initial = estimate(&[], &bank, prior);
+        let initial = estimate(&[], &bank, prior).unwrap();
         let answers = vec![
             Answer {
                 item: "item_5".to_string(),
@@ -342,7 +380,7 @@ mod tests {
                 of: 5,
             },
         ];
-        let after = estimate(&answers, &bank, prior);
+        let after = estimate(&answers, &bank, prior).unwrap();
 
         assert!(after.theta < initial.theta);
     }
@@ -352,13 +390,13 @@ mod tests {
         let bank = sample_bank();
         let prior = Prior::centred_on(3.0);
 
-        let e0 = estimate(&[], &bank, prior);
+        let e0 = estimate(&[], &bank, prior).unwrap();
         let a1 = vec![Answer {
             item: "item_8".to_string(),
             right: 3,
             of: 5,
         }];
-        let e1 = estimate(&a1, &bank, prior);
+        let e1 = estimate(&a1, &bank, prior).unwrap();
 
         let a2 = vec![
             Answer {
@@ -372,21 +410,209 @@ mod tests {
                 of: 5,
             },
         ];
-        let e2 = estimate(&a2, &bank, prior);
+        let e2 = estimate(&a2, &bank, prior).unwrap();
 
         assert!(e1.se < e0.se);
         assert!(e2.se < e1.se);
     }
 
+    /// Runs a whole test on `bank`: after each answer the estimate is made
+    /// again and the next item is asked for. The learner answers every word of
+    /// an item right or every word wrong, by `learner`. Returns the ids of the
+    /// items given, in order, and the last estimate.
+    fn run_test(bank: &Bank, seed: u64, learner: impl Fn(&Item) -> bool, count: usize) -> (Vec<String>, Estimate) {
+        let prior = Prior::centred_on(3.0);
+        let mut answers: Vec<Answer> = Vec::new();
+        let mut given: Vec<String> = Vec::new();
+        for _ in 0..count {
+            let now = estimate(&answers, bank, prior).unwrap();
+            let Some(item) = next_item(bank, now, &given, Task::Dictation, seed) else {
+                break;
+            };
+            answers.push(Answer {
+                item: item.id.clone(),
+                right: if learner(item) { item.words } else { 0 },
+                of: item.words,
+            });
+            given.push(item.id.clone());
+        }
+        let last = estimate(&answers, bank, prior).unwrap();
+        (given, last)
+    }
+
     #[test]
-    fn same_seed_gives_same_item() {
+    fn the_same_seed_gives_the_same_whole_test() {
         let bank = sample_bank();
-        let est = Estimate { theta: 3.5, se: 0.8 };
-        let taken = vec![];
+        let learner = |item: &Item| item.difficulty < 4.0;
+        let first = run_test(&bank, 42, learner, 10).0;
+        let second = run_test(&bank, 42, learner, 10).0;
+        assert_eq!(first, second);
+    }
 
-        let item1 = next_item(&bank, est, &taken, Task::Dictation, 42);
-        let item2 = next_item(&bank, est, &taken, Task::Dictation, 42);
+    #[test]
+    fn other_seeds_give_other_tests() {
+        let bank = sample_bank();
+        let learner = |item: &Item| item.difficulty < 4.0;
+        let mut tests = std::collections::HashSet::new();
+        for seed in 0..100 {
+            tests.insert(run_test(&bank, seed, learner, 8).0);
+        }
+        // With one draw for the whole test there were only three possible tests.
+        assert!(tests.len() > 3, "only {} different tests from 100 seeds", tests.len());
+    }
 
-        assert_eq!(item1, item2);
+    #[test]
+    fn every_answer_right_ends_at_the_top_and_every_answer_wrong_at_the_bottom() {
+        let bank = sample_bank();
+        let (_, top) = run_test(&bank, 1, |_| true, 15);
+        let (_, bottom) = run_test(&bank, 1, |_| false, 15);
+        assert_eq!(level(top.theta, Cuts::default()), Level::C2);
+        assert_eq!(level(bottom.theta, Cuts::default()), Level::A1);
+    }
+
+    #[test]
+    fn next_item_skips_taken_items_and_other_parts() {
+        let mut bank = sample_bank();
+        bank.items.push(Item {
+            id: "say_1".to_string(),
+            skill: Skill::Mouth,
+            task: Task::Shadowing,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        });
+        let now = Estimate { theta: 3.0, se: 0.8 };
+
+        // Only the part asked for is given.
+        for seed in 0..50 {
+            let item = next_item(&bank, now, &[], Task::Dictation, seed).unwrap();
+            assert_eq!(item.task, Task::Dictation);
+        }
+
+        // An item already taken is not given again.
+        let first = next_item(&bank, now, &[], Task::Dictation, 7).unwrap().id.clone();
+        let taken = vec![first.clone()];
+        for seed in 0..50 {
+            let item = next_item(&bank, now, &taken, Task::Dictation, seed).unwrap();
+            assert_ne!(item.id, first);
+        }
+
+        // Nothing is left when every item of the part is taken, or the part has none.
+        let all: Vec<String> = bank
+            .items
+            .iter()
+            .filter(|item| item.task == Task::Dictation)
+            .map(|item| item.id.clone())
+            .collect();
+        assert!(next_item(&bank, now, &all, Task::Dictation, 1).is_none());
+        assert!(next_item(&bank, now, &[], Task::Vocabulary, 1).is_none());
+    }
+
+    #[test]
+    fn the_item_given_is_one_of_the_best_three() {
+        let bank = sample_bank();
+        let now = Estimate { theta: 3.0, se: 0.8 };
+        let mut by_information: Vec<&Item> = bank.items.iter().collect();
+        by_information.sort_by(|a, b| b.information(3.0).partial_cmp(&a.information(3.0)).unwrap());
+        let best: Vec<&str> = by_information.iter().take(3).map(|item| item.id.as_str()).collect();
+        for seed in 0..50 {
+            let item = next_item(&bank, now, &[], Task::Dictation, seed).unwrap();
+            assert!(best.contains(&item.id.as_str()));
+        }
+    }
+
+    #[test]
+    fn finished_waits_for_the_fewest_and_stops_at_the_most() {
+        let rule = StopRule {
+            se: 0.35,
+            fewest: 4,
+            most: 10,
+        };
+        let sure = Estimate { theta: 3.0, se: 0.1 };
+        let unsure = Estimate { theta: 3.0, se: 0.9 };
+        assert!(
+            !finished(sure, 3, rule),
+            "a sure estimate must still wait for the fewest"
+        );
+        assert!(finished(sure, 4, rule));
+        assert!(!finished(unsure, 9, rule));
+        assert!(
+            finished(unsure, 10, rule),
+            "the most must stop an estimate still unsure"
+        );
+    }
+
+    #[test]
+    fn a_level_begins_on_its_cut() {
+        let cuts = Cuts::default();
+        assert_eq!(level(2.0, cuts), Level::A2);
+        assert_eq!(level(1.999, cuts), Level::A1);
+        assert_eq!(level(6.0, cuts), Level::C2);
+        assert_eq!(level(5.999, cuts), Level::C1);
+        assert_eq!(level(0.5, cuts), Level::A1);
+        assert_eq!(level(-3.0, cuts), Level::A1);
+        assert_eq!(level(9.0, cuts), Level::C2);
+    }
+
+    #[test]
+    fn a_bad_prior_is_refused() {
+        let bank = sample_bank();
+        let bad = [
+            Prior { mean: 3.0, sd: 0.0 },
+            Prior { mean: 3.0, sd: -1.0 },
+            Prior {
+                mean: 3.0,
+                sd: f64::NAN,
+            },
+            Prior {
+                mean: 3.0,
+                sd: f64::INFINITY,
+            },
+            Prior {
+                mean: f64::NAN,
+                sd: 1.2,
+            },
+            Prior {
+                mean: f64::INFINITY,
+                sd: 1.2,
+            },
+        ];
+        for prior in bad {
+            assert_eq!(estimate(&[], &bank, prior), Err(PlacementError::BadPrior));
+        }
+    }
+
+    #[test]
+    fn an_answer_for_an_unknown_item_is_refused() {
+        let bank = sample_bank();
+        let answers = vec![Answer {
+            item: "item_99".to_string(),
+            right: 1,
+            of: 1,
+        }];
+        assert_eq!(
+            estimate(&answers, &bank, Prior::centred_on(3.0)),
+            Err(PlacementError::UnknownItem("item_99".to_string()))
+        );
+    }
+
+    #[test]
+    fn more_words_right_than_asked_count_as_all_right() {
+        let bank = sample_bank();
+        let prior = Prior::centred_on(3.0);
+        let too_many = vec![Answer {
+            item: "item_8".to_string(),
+            right: 50,
+            of: 5,
+        }];
+        let all_right = vec![Answer {
+            item: "item_8".to_string(),
+            right: 5,
+            of: 5,
+        }];
+        assert_eq!(
+            estimate(&too_many, &bank, prior).unwrap(),
+            estimate(&all_right, &bank, prior).unwrap()
+        );
     }
 }
