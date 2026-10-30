@@ -290,31 +290,30 @@ pub fn level(theta: f64, cuts: Cuts) -> Level {
     }
 }
 
-/// Keep an ability estimate up to date as the learner practises: nudge theta
-/// towards how they did on this item, and narrow how far off it may be.
-pub fn update(now: &Estimate, item: &Item, answer: &Answer) -> Estimate {
+/// Keep an ability estimate up to date as the learner practises.
+///
+/// The current estimate becomes the prior, and the practice answer is
+/// incorporated through the same EAP model as placement. The uncertainty
+/// never falls below 0.15, so repeated practice does not make the estimate
+/// unrealistically certain.
+pub fn update(now: &Estimate, item: &Item, answer: &Answer) -> Result<Estimate, PlacementError> {
+    const MIN_SE: f64 = 0.15;
+
     if answer.of == 0 {
-        return *now;
+        return Ok(*now);
     }
 
-    let p = item.p(now.theta);
-    let actual = (answer.right as f64) / (answer.of as f64);
-    let error = actual - p;
+    let bank = Bank {
+        items: vec![item.clone()],
+    };
+    let prior = Prior {
+        mean: now.theta,
+        sd: now.se,
+    };
+    let mut updated = estimate(std::slice::from_ref(answer), &bank, prior)?;
+    updated.se = updated.se.max(MIN_SE);
 
-    // How far theta moves: big steps early on when se is wide, smaller steps
-    // once we know more.
-    let k = now.se.min(1.0) * item.discrimination * 0.4;
-    let new_theta = now.theta + k * error;
-
-    // Each answered line gives a little more certainty.
-    let info = item.information(now.theta);
-    let se_reduction = 0.01 * (1.0 + info).ln().min(0.05);
-    let new_se = (now.se - se_reduction).max(0.15);
-
-    Estimate {
-        theta: new_theta,
-        se: new_se,
-    }
+    Ok(updated)
 }
 
 #[cfg(test)]
@@ -660,7 +659,7 @@ mod tests {
             right: 5,
             of: 5,
         };
-        let updated = update(&now, &item, &ans);
+        let updated = update(&now, &item, &ans).unwrap();
 
         assert!(updated.theta > now.theta);
         assert!(updated.se < now.se);
@@ -683,7 +682,7 @@ mod tests {
             right: 0,
             of: 5,
         };
-        let updated = update(&now, &item, &ans);
+        let updated = update(&now, &item, &ans).unwrap();
 
         assert!(updated.theta < now.theta);
         assert!(updated.se < now.se);
@@ -705,8 +704,51 @@ mod tests {
             right: 0,
             of: 0,
         };
-        let updated = update(&now, &item, &ans);
+        let updated = update(&now, &item, &ans).unwrap();
 
         assert_eq!(updated, now);
+    }
+
+    #[test]
+    fn update_never_narrows_past_the_floor() {
+        let item = Item {
+            id: "i1".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        };
+        // Repeated practice should not make the estimate unrealistically certain.
+        let now = Estimate { theta: 3.0, se: 0.10 };
+        let ans = Answer {
+            item: "i1".to_string(),
+            right: 5,
+            of: 5,
+        };
+        let updated = update(&now, &item, &ans).unwrap();
+        assert!(updated.se >= 0.15);
+    }
+
+    #[test]
+    fn update_refuses_a_bad_prior() {
+        let item = Item {
+            id: "i1".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        };
+        let bad_now = Estimate {
+            theta: f64::NAN,
+            se: 0.5,
+        };
+        let ans = Answer {
+            item: "i1".to_string(),
+            right: 5,
+            of: 5,
+        };
+        assert_eq!(update(&bad_now, &item, &ans), Err(PlacementError::BadPrior));
     }
 }
