@@ -1,7 +1,8 @@
 # Placement: a learner's level for listening and speaking
 
-*Status: design, 2026-10-15. Nothing here is built yet; the issues that build
-it are listed [at the end](#the-work).*
+*Status: design, 2026-10-15. The engine (`estimate`, `next_item`, `finished`
+and `level`) is built, in `crates/sanjeh/src/placement.rs`; the rest is not
+built yet. The issues that build it are listed [at the end](#the-work).*
 
 ## Goal
 
@@ -167,12 +168,20 @@ pub struct Item { pub id: String, pub skill: Skill, pub task: Task, pub difficul
 pub struct Answer { pub item: String, pub right: u32, pub of: u32 }   // words right of words asked
 pub struct Estimate { pub theta: f64, pub se: f64 }
 
-pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Estimate;
-pub fn next_item<'a>(bank: &'a Bank, now: &Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item>;
-pub fn finished(now: &Estimate, asked: usize, rule: &StopRule) -> bool;
-pub fn level(theta: f64, cuts: &Cuts) -> Level;
-pub fn update(now: &Estimate, item: &Item, answer: &Answer) -> Estimate;   // keeping it up to date
+pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimate, PlacementError>;
+pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item>;
+pub fn finished(now: Estimate, asked: usize, rule: StopRule) -> bool;
+pub fn level(theta: f64, cuts: Cuts) -> Level;
+pub fn update(now: Estimate, item: &Item, answer: &Answer) -> Estimate;   // keeping it up to date (not built yet)
 ```
+
+`Estimate`, `StopRule` and `Cuts` are `Copy`, so they are passed by value.
+`estimate` refuses a prior whose mean isn't finite or whose SD isn't positive
+and finite, and an answer for an item the bank doesn't have; an answer with
+more words right than asked counts as all right. `next_item` takes one `seed`
+for a whole test: the number of items already taken is mixed into it, so each
+item is a fresh draw and the same seed still gives the same test. `update` is
+the work of [#22](https://github.com/Cueiq/sanjeh/issues/22).
 
 Scoring an answer (which words were right) is the caller's: it depends on
 how the answer was given (typed, spoken) and is not part of placement.
