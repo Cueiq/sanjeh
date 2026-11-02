@@ -2,3 +2,4 @@
 .DS_Store
 # Benchmarks that may not be shared (copyrighted media, private ratings)
 /benchmarks/private/
+/models/ggml-*.bin

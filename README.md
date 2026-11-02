@@ -244,6 +244,16 @@ println!("{:.1} to hear, {:.1} to say", measured.ear.level, measured.mouth.level
   [the design](docs/placement.md) and [#10](https://github.com/Cueiq/sanjeh/issues/10).
 - **A word's level in its sentence**, not only by the word lists.
 
+### Hearing audio
+
+To decode audio clips, build the project with `--features hear`.
+You need to download a GGML model from [whisper.cpp's models](https://huggingface.co/ggerganov/whisper.cpp/tree/main) into a `models/` directory. The tool takes 16 kHz mono WAV files (16-bit integer or 32-bit float).
+
+Example:
+```bash
+sanjeh line hear test.wav --model models/ggml-tiny.en.bin
+```
+
 ## How it is built
 
 - **Features** are computed by deterministic, tested code: a line's length,
