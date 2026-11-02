@@ -82,7 +82,7 @@ const SAME: &[(&str, &str)] = &[
 /// slashes, its common other spelling — and a run-together form its words.
 pub fn normal(word: &str) -> Vec<String> {
     let word = word.to_lowercase().replace(['’', '‘'], "'");
-    let word = word.trim_matches('\'');
+    let word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'');
     let word = SAME
         .iter()
         .find(|(form, _)| *form == word)
@@ -309,5 +309,10 @@ mod tests {
             },
         );
         assert_eq!(h.miss_tiny, 0.0);
+    }
+    #[test]
+    fn punctuation_is_stripped_from_words() {
+        assert_eq!(normal("Tell him."), vec!["tell", "him"]);
+        assert_eq!(normal("tonight,"), vec!["tonight"]);
     }
 }
