@@ -266,14 +266,17 @@ pub fn facts(input: &LineInput) -> Facts {
     // as a name in the episode, or a word nothing knows.
     let capital: Vec<bool> = ranges
         .iter()
-        .map(|r| {
+        .enumerate()
+        .map(|(at, r)| {
             let word = &spoken_text[r.clone()];
+            let lower = &tokens[at];
+
             let before = spoken_text[..r.start].trim_end();
             let sentence_start = before.chars().last().is_none_or(|c| ".?!-\"“…".contains(c));
 
             word.starts_with(char::is_uppercase)
                 && !matches!(word, "I" | "I'm" | "I'll" | "I've" | "I'd" | "OK")
-                && (!sentence_start || word_level(&word.to_lowercase()).is_none())
+                && (!sentence_start || (word_level(lower).is_none() && !known(lower, accent)))
         })
         .collect();
     let said_wrong: Vec<String> = tokens

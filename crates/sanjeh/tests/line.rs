@@ -190,6 +190,54 @@ fn a_model_weighs_the_features_it_names() {
 }
 
 #[test]
+fn known_sentence_opening_words_are_not_names() {
+    let examples = ["It's fine.", "That's it.", "You're late.", "Don't go."];
+
+    for text in examples {
+        let f = facts(&line(text, 2500));
+
+        assert!(
+            f.names.is_empty(),
+            "{text:?} should not be treated as a name: {:?}",
+            f.names
+        );
+    }
+}
+
+#[test]
+fn a_known_word_at_sentence_start_is_still_graded() {
+    let capitalized = facts(&line("Congratulations on your success.", 3000));
+    let lowercase = facts(&line("congratulations on your success.", 3000));
+
+    assert!(
+        !capitalized.names.contains(&"congratulations".to_string()),
+        "congratulations should not be treated as a name"
+    );
+
+    assert_eq!(
+        capitalized.features["vocab"], lowercase.features["vocab"],
+        "capitalization should not change vocabulary measurement"
+    );
+
+    assert_eq!(
+        capitalized.hard_words, lowercase.hard_words,
+        "capitalization should not change hard-word detection"
+    );
+}
+
+#[test]
+fn a_sentence_opening_contraction_keeps_its_hard_th_sound() {
+    let f = facts(&line("That's it.", 2500));
+
+    assert!(
+        f.hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "that's"),
+        "the th sound in that's should be preserved"
+    );
+}
+
+#[test]
 fn the_default_model_measures_a_line() {
     let m = measure(
         &line("There are no bad situations as long as I'm with you.", 4700),
@@ -236,8 +284,11 @@ fn an_unknown_language_does_not_use_the_persian_profile() {
 }
 
 #[test]
-fn a_proper_name_at_sentence_start_is_not_a_hard_word() {
-    let f = facts(&line("Elizabeth arrived at the station.", 2500));
+fn a_known_episode_name_at_sentence_start_is_not_a_hard_word() {
+    let mut input = line("Elizabeth arrived at the station.", 2500);
+    input.names = vec!["Elizabeth".to_string()];
+
+    let f = facts(&input);
 
     assert_eq!(f.names, ["elizabeth"]);
     assert!(f.hard_words.iter().all(|(w, _)| w != "elizabeth"));
