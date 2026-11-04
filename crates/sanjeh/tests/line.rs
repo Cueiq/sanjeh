@@ -34,13 +34,19 @@ fn words_said_wrong_on_purpose_have_no_answer_to_hold_to() {
 }
 
 #[test]
-fn a_real_slang_word_is_not_marked_as_said_wrong() {
-    let f = facts(&line("That was a screwy situation.", 3000));
+fn a_real_slang_word_in_subtlex_is_not_said_wrong() {
+    let f = facts(&line("That was a wanky idea.", 3000));
 
     assert!(
-        !f.said_wrong.iter().any(|word| word == "screwy"),
-        "a real slang word should not be marked as said wrong: {:?}",
+        !f.said_wrong.iter().any(|word| word == "wanky"),
+        "a real word should not be marked as said wrong: {:?}",
         f.said_wrong
+    );
+
+    assert!(
+        !f.names.iter().any(|word| word == "wanky"),
+        "a real word should not be treated as a name: {:?}",
+        f.names
     );
 }
 

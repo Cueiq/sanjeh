@@ -143,6 +143,16 @@ fn known(word: &str, accent: crate::Accent) -> bool {
     !matches!(pronounce(word, accent), Pronounced::Unknown)
 }
 
+static SUBTLEX_WORDS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    include_str!("../../../../data/line/subtlex-us-words.txt")
+        .lines()
+        .collect()
+});
+
+fn in_subtlex(word: &str) -> bool {
+    SUBTLEX_WORDS.binary_search(&word).is_ok()
+}
+
 /// A word's sound: the table's, or its first reading where its readings
 /// differ (*with*), as both have the same syllables and hard sounds.
 fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
@@ -286,6 +296,7 @@ pub fn facts(input: &LineInput) -> Facts {
             !capital[*at]
                 && !known(t, accent)
                 && word_level(t).is_none()
+                && !in_subtlex(t)
                 && (1..=3).contains(&t.matches('w').count())
                 && w_readings(t)
                     .iter()
@@ -300,7 +311,10 @@ pub fn facts(input: &LineInput) -> Facts {
             !said_wrong.contains(t)
                 && (capital[at]
                     || (known_names.contains(t) && word_level(t).is_none())
-                    || (!known(t, accent) && word_level(t).is_none() && !t.chars().all(|c| c.is_ascii_digit())))
+                    || (!known(t, accent)
+                        && word_level(t).is_none()
+                        && !in_subtlex(t)
+                        && !t.chars().all(|c| c.is_ascii_digit())))
         })
         .collect();
     let names: Vec<String> = tokens
