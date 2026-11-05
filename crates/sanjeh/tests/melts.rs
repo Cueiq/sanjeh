@@ -27,7 +27,6 @@ fn lacks(line: &str, accent: Accent, rule: &str) {
 
 #[test]
 fn a_consonant_moves_onto_the_vowel_after_it() {
-    has("Come on, Charley.", Gb, "linking co-mon");
     has("Would you like a drink?", Us, "linking li-ka");
     has("It's a bed.", Gb, "linking it-sa");
     // Links in a row are one melt.
@@ -86,6 +85,11 @@ fn h_and_them_drop_inside_a_sentence() {
     has("But how did he guess?", Us, "h-dropping di-dee");
     has("Kill them!", Us, "them ki-lem");
     lacks("He is here.", Us, "h-dropping");
+}
+
+#[test]
+fn them_fusion_is_kept_after_another_fusion() {
+    has("I don't know them.", Us, "fusion 'em");
 }
 
 #[test]

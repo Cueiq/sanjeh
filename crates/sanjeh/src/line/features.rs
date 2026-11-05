@@ -2,12 +2,13 @@
 //! it can be practised and what to say about it.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use crate::connected::{connected_speech, line_words, melts};
 use crate::levels::{Level, word_level};
 use crate::{Pronounced, pronounce, readings};
 
-use super::heard::{Hearing, WordKind, hearing};
+use super::heard::{Heard, Hearing, WordKind, hearing};
 use super::{Entry, LineInput, Reason, Skill, WhyNot};
 
 /// A line's features by name, the numbers a model weighs. Their names are
@@ -111,10 +112,28 @@ fn expand(token: &str) -> Vec<String> {
         ("won't", &["will", "not"]),
         ("can't", &["can", "not"]),
         ("shan't", &["shall", "not"]),
+        ("cannot", &["can", "not"]),
         ("ain't", &["am", "not"]),
         ("gonna", &["going", "to"]),
         ("wanna", &["want", "to"]),
         ("gotta", &["got", "to"]),
+        ("hafta", &["have", "to"]),
+        ("hasta", &["has", "to"]),
+        ("useta", &["used", "to"]),
+        ("oughta", &["ought", "to"]),
+        ("kinda", &["kind", "of"]),
+        ("sorta", &["sort", "of"]),
+        ("lotta", &["lot", "of"]),
+        ("outta", &["out", "of"]),
+        ("lemme", &["let", "me"]),
+        ("gimme", &["give", "me"]),
+        ("dunno", &["do", "not", "know"]),
+        ("whaddya", &["what", "do", "you"]),
+        ("whatcha", &["what", "are", "you"]),
+        ("dontcha", &["do", "not", "you"]),
+        ("gotcha", &["got", "you"]),
+        ("'cause", &["because"]),
+        ("'em", &["them"]),
         ("y'all", &["you", "all"]),
         ("let's", &["let", "us"]),
         ("c'mon", &["come", "on"]),
@@ -142,6 +161,16 @@ fn known(word: &str, accent: crate::Accent) -> bool {
     !matches!(pronounce(word, accent), Pronounced::Unknown)
 }
 
+static SUBTLEX_WORDS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    include_str!("../../../../data/line/subtlex-us-words.txt")
+        .lines()
+        .collect()
+});
+
+fn in_subtlex(word: &str) -> bool {
+    SUBTLEX_WORDS.binary_search(&word).is_ok()
+}
+
 /// A word's sound: the table's, or its first reading where its readings
 /// differ (*with*), as both have the same syllables and hard sounds.
 fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
@@ -153,6 +182,39 @@ fn ipa(word: &str, accent: crate::Accent) -> Option<String> {
 }
 
 const IPA_VOWELS: &str = "aeiouæɑɒɔəɚɛɜɝɪʊʌɐᵻy";
+
+/// Hard-sound categories for each learner's first language.
+static HARD_SOUND_PROFILES: LazyLock<BTreeMap<String, Vec<String>>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../../../data/line/hard-sounds.json"))
+        .expect("hard-sound profiles must be valid")
+});
+
+/// The hard sounds to use for a learner's first language.
+fn hard_sound_profile(language: Option<&str>) -> &'static [String] {
+    let language = language.unwrap_or("fa").trim().to_lowercase();
+    let language = language.split('-').next().unwrap_or("fa");
+
+    HARD_SOUND_PROFILES.get(language).map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// Checks whether a first language has a hard-sound profile.
+pub fn validate_language(language: Option<&str>) -> Result<(), String> {
+    let Some(language) = language else {
+        return Ok(());
+    };
+
+    let normalized = language.trim().to_ascii_lowercase();
+    let base_language = normalized.split('-').next().unwrap_or("");
+
+    if HARD_SOUND_PROFILES.contains_key(base_language) {
+        Ok(())
+    } else {
+        Err(format!(
+            "unsupported language {language:?}; supported languages: {}",
+            HARD_SOUND_PROFILES.keys().cloned().collect::<Vec<_>>().join(", ")
+        ))
+    }
+}
 
 /// How many syllables a word has: its sound's vowels, or its spelling's.
 fn syllables(word: &str, accent: crate::Accent) -> usize {
@@ -188,19 +250,63 @@ fn w_readings(word: &str) -> Vec<String> {
     out
 }
 
-fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
+/// Returns the speech duration from word timings, when available.
+fn heard_duration_ms(heard: &Heard, hearing: &Hearing, duration_ms: u32) -> Option<u32> {
+    let total = hearing
+        .words
+        .iter()
+        .filter(|word| word.kind != WordKind::Filler)
+        .count();
+
+    if total == 0 {
+        return None;
+    }
+
+    let heard_count = hearing
+        .words
+        .iter()
+        .filter(|word| word.kind != WordKind::Filler && word.small)
+        .count();
+
+    // Use timings only when the small model heard more than half the words.
+    if heard_count * 2 <= total {
+        return None;
+    }
+
+    let words = &heard.small;
+
+    let (Some(first), Some(last)) = (words.first(), words.last()) else {
+        return None;
+    };
+
+    let (Some(start_ms), Some(end_ms)) = (first.start_ms, last.end_ms) else {
+        return None;
+    };
+
+    if end_ms > start_ms {
+        Some((end_ms - start_ms).min(duration_ms))
+    } else {
+        None
+    }
+}
+
+fn hard_sounds_of(word: &str, accent: crate::Accent, enabled: &[String]) -> Vec<String> {
     let Some(sound) = ipa(word, accent) else { return vec![] };
     let sound: String = sound.chars().filter(|c| !matches!(c, 'ˈ' | 'ˌ')).collect();
     let mut found = vec![];
     let mut chars = sound.chars();
-    if chars.next() == Some('s') && chars.next().is_some_and(|c| "ptkmnlw".contains(c)) {
+    if enabled.iter().any(|s| s == "s-cluster")
+        && chars.next() == Some('s')
+        && chars.next().is_some_and(|c| "ptkmnlw".contains(c))
+    {
         found.push("s-cluster".to_string());
     }
     let common_th = ["the", "this", "that", "they", "them", "there", "then", "than"];
-    if (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word) {
+    if enabled.iter().any(|s| s == "th") && (sound.contains('θ') || sound.contains('ð')) && !common_th.contains(&word)
+    {
         found.push("th".to_string());
     }
-    if sound.contains('w') {
+    if enabled.iter().any(|s| s == "w") && sound.contains('w') {
         found.push("w".to_string());
     }
     let tail = sound
@@ -208,7 +314,7 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
         .rev()
         .take_while(|c| !IPA_VOWELS.contains(*c) && *c != 'ː')
         .count();
-    if tail >= 3 {
+    if enabled.iter().any(|s| s == "end-cluster") && tail >= 3 {
         found.push("end-cluster".to_string());
     }
     found
@@ -217,11 +323,12 @@ fn hard_sounds_of(word: &str, accent: crate::Accent) -> Vec<String> {
 /// The facts of a line.
 pub fn facts(input: &LineInput) -> Facts {
     let text = input.text.trim();
+    let spoken_text = super::numbers::expand_numbers(text);
     let accent = input.accent;
-    let ranges = line_words(text);
+    let ranges = line_words(&spoken_text);
     let tokens: Vec<String> = ranges
         .iter()
-        .map(|r| text[r.clone()].to_lowercase().replace('’', "'"))
+        .map(|r| spoken_text[r.clone()].to_lowercase().replace('’', "'"))
         .collect();
     let known_names: Vec<String> = input.names.iter().map(|n| n.to_lowercase()).collect();
 
@@ -229,12 +336,17 @@ pub fn facts(input: &LineInput) -> Facts {
     // as a name in the episode, or a word nothing knows.
     let capital: Vec<bool> = ranges
         .iter()
-        .map(|r| {
-            let word = &text[r.clone()];
-            let before = text[..r.start].trim_end();
+        .enumerate()
+        .map(|(at, r)| {
+            let word = &spoken_text[r.clone()];
+            let lower = &tokens[at];
+
+            let before = spoken_text[..r.start].trim_end();
+            let sentence_start = before.chars().last().is_none_or(|c| ".?!-\"“…".contains(c));
+
             word.starts_with(char::is_uppercase)
                 && !matches!(word, "I" | "I'm" | "I'll" | "I've" | "I'd" | "OK")
-                && before.chars().last().is_some_and(|c| !".?!-\"“…".contains(c))
+                && (!sentence_start || (word_level(lower).is_none() && !known(lower, accent)))
         })
         .collect();
     let said_wrong: Vec<String> = tokens
@@ -244,6 +356,7 @@ pub fn facts(input: &LineInput) -> Facts {
             !capital[*at]
                 && !known(t, accent)
                 && word_level(t).is_none()
+                && !in_subtlex(t)
                 && (1..=3).contains(&t.matches('w').count())
                 && w_readings(t)
                     .iter()
@@ -258,7 +371,10 @@ pub fn facts(input: &LineInput) -> Facts {
             !said_wrong.contains(t)
                 && (capital[at]
                     || (known_names.contains(t) && word_level(t).is_none())
-                    || (!known(t, accent) && word_level(t).is_none() && !t.chars().all(|c| c.is_ascii_digit())))
+                    || (!known(t, accent)
+                        && word_level(t).is_none()
+                        && !in_subtlex(t)
+                        && !t.chars().all(|c| c.is_ascii_digit())))
         })
         .collect();
     let names: Vec<String> = tokens
@@ -305,10 +421,22 @@ pub fn facts(input: &LineInput) -> Facts {
         vocab -= 0.5;
     }
 
+    let hearing = input
+        .heard
+        .as_ref()
+        .map(|heard| hearing(&tokens, |at| is_name[at], heard));
+
+    let duration_ms = input
+        .heard
+        .as_ref()
+        .zip(hearing.as_ref())
+        .and_then(|(heard, hearing)| heard_duration_ms(heard, hearing, input.duration_ms))
+        .unwrap_or(input.duration_ms);
+
     // Sound.
     let syllable_count: usize = tokens.iter().map(|t| syllables(t, accent)).sum();
-    let seconds = (input.duration_ms.max(400) as f64) / 1000.0;
-    let found = melts(text, accent);
+    let seconds = (duration_ms.max(400) as f64) / 1000.0;
+    let found = melts(&spoken_text, accent);
     let melt_list: Vec<(String, String, String)> = found
         .iter()
         .filter_map(|m| {
@@ -316,7 +444,7 @@ pub fn facts(input: &LineInput) -> Facts {
             let last = ranges.get(m.words.end.checked_sub(1)?)?;
             Some((
                 m.rule.to_string(),
-                text[first.start..last.end].to_string(),
+                spoken_text[first.start..last.end].to_string(),
                 m.sound.clone(),
             ))
         })
@@ -331,22 +459,23 @@ pub fn facts(input: &LineInput) -> Facts {
                 .map(|f| (t.clone(), f.words.clone()))
         })
         .collect();
+    let enabled_hard_sounds = hard_sound_profile(input.language.as_deref());
+
     let hard_sounds: Vec<(String, String)> = tokens
         .iter()
         .enumerate()
         .filter(|(at, _)| !is_name[*at])
-        .flat_map(|(_, t)| hard_sounds_of(t, accent).into_iter().map(move |s| (s, t.clone())))
+        .flat_map(|(_, t)| {
+            hard_sounds_of(t, accent, enabled_hard_sounds)
+                .into_iter()
+                .map(move |s| (s, t.clone()))
+        })
         .collect();
     let ear_melts = melt_list
         .iter()
         .filter(|(rule, _, _)| EAR_MELTS.contains(&rule.as_str()))
         .count()
         + written.len();
-
-    let hearing = input
-        .heard
-        .as_ref()
-        .map(|heard| hearing(&tokens, |at| is_name[at], heard));
 
     let lower = text.to_lowercase().replace('’', "'");
     let lower = lower.trim_start_matches(['"', '“']);
@@ -414,7 +543,7 @@ pub fn facts(input: &LineInput) -> Facts {
         tokens,
         whole_sentence,
         voices: input.voices,
-        duration_ms: input.duration_ms,
+        duration_ms,
         syllables: syllable_count,
         names,
         said_wrong,

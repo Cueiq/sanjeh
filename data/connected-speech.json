@@ -241,6 +241,10 @@
     { "words": "what do you", "sound": "whaddya", "ipa": { "us": "ˈwʌɾəjə", "gb": "ˈwɒdəjə" } },
     { "words": "what are you", "sound": "whatcha", "ipa": { "us": "ˈwʌtʃə", "gb": "ˈwɒtʃə" } },
     { "words": "don't you", "sound": "dontcha", "ipa": { "us": "ˈdoʊntʃə", "gb": "ˈdəʊntʃə" } },
-    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } }
+    { "words": "come on", "sound": "c'mon", "ipa": { "us": "kəˈmɑn", "gb": "kəˈmɒn" } },
+    { "words": "can not", "sound": "cannot", "ipa": { "us": "ˈkænɑt", "gb": "ˈkænɒt" } },
+    { "words": "got you", "sound": "gotcha", "ipa": { "us": "ˈgɑːtʃə", "gb": "ˈgɒtʃə" } },
+    { "words": "because", "sound": "'cause", "ipa": { "us": "kəz", "gb": "kəz" } },
+    { "words": "them", "sound": "'em", "ipa": { "us": "əm", "gb": "əm" } }
   ]
 }

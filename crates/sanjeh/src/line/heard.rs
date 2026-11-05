@@ -22,6 +22,12 @@ pub struct HeardWord {
     pub word: String,
     #[serde(default)]
     pub p: Option<f64>,
+    /// When the word starts, in milliseconds from the beginning of the audio.
+    #[serde(default)]
+    pub start_ms: Option<u32>,
+    /// When the word ends, in milliseconds from the beginning of the audio.
+    #[serde(default)]
+    pub end_ms: Option<u32>,
 }
 
 /// What a line's words came to with the three ears.
@@ -182,7 +188,11 @@ pub fn hearing(tokens: &[String], is_name: impl Fn(usize) -> bool, heard: &Heard
     let model_words = |heard: &[HeardWord]| -> Vec<(String, Option<f64>)> {
         heard
             .iter()
-            .flat_map(|h| normal(&h.word).into_iter().map(move |w| (w, h.p)))
+            .flat_map(|h| {
+                let expanded = super::numbers::expand_numbers(&h.word);
+
+                normal(&expanded).into_iter().map(move |w| (w, h.p))
+            })
             .collect()
     };
     let tiny = model_words(&heard.tiny);
@@ -255,6 +265,8 @@ mod tests {
             .map(|w| HeardWord {
                 word: w.to_string(),
                 p: Some(0.9),
+                start_ms: None,
+                end_ms: None,
             })
             .collect()
     }
@@ -309,5 +321,24 @@ mod tests {
             },
         );
         assert_eq!(h.miss_tiny, 0.0);
+    }
+
+    #[test]
+    fn heard_digits_match_spelled_out_numbers() {
+        let line = toks("Batman six hundred eight.");
+
+        let h = hearing(
+            &line,
+            |_| false,
+            &Heard {
+                tiny: heard("Batman 608"),
+                base: heard("Batman 608"),
+                small: heard("Batman 608"),
+            },
+        );
+
+        assert_eq!(h.miss_tiny, 0.0);
+        assert_eq!(h.miss_base, 0.0);
+        assert_eq!(h.miss_small, 0.0);
     }
 }

@@ -89,6 +89,22 @@ static LISTED: LazyLock<Vec<(String, String, Level)>> = LazyLock::new(|| {
     listed
 });
 
+/// Number words and the levels the vocabulary lists give them.
+static NUMBER_WORDS: LazyLock<HashMap<String, Level>> = LazyLock::new(|| {
+    let mut numbers = HashMap::new();
+
+    for (head, pos, level) in LISTED.iter() {
+        if pos != "number" {
+            continue;
+        }
+
+        let at = numbers.entry(head.clone()).or_insert(*level);
+        *at = (*at).min(*level);
+    }
+
+    numbers
+});
+
 /// Every word the lists have, and every form its part of speech takes by
 /// the spelling rules — a noun's plural, a verb's *-s*, *-ed* and *-ing*,
 /// an adjective's *-er* and *-est* — and the irregular forms below, each at
@@ -313,6 +329,21 @@ const SUFFIXES: &[(&str, &str)] = &[
     ("ful", ""),
 ];
 
+/// The level of a hyphenated number whose components are listed as numbers.
+/// Take the hardest component's level.
+fn hyphenated_number_level(word: &str) -> Option<Level> {
+    let mut parts = word.split('-');
+    let mut level = *NUMBER_WORDS.get(parts.next()?)?;
+    let mut hyphenated = false;
+
+    for part in parts {
+        level = level.max(*NUMBER_WORDS.get(part)?);
+        hyphenated = true;
+    }
+
+    hyphenated.then_some(level)
+}
+
 /// The word and the forms it may be listed under: *stopped* → *stop*,
 /// *going* → *go*, *went* → *go*.
 pub fn base_forms(word: &str) -> Vec<String> {
@@ -336,14 +367,56 @@ pub fn base_forms(word: &str) -> Vec<String> {
     forms
 }
 
-/// The level a word is listed at, by its lowest-listed form; `None` for a
-/// word the lists don't have (a name, slang, a rare word).
+/// The level of a word by its lowest-listed form, or of a hyphenated
+/// number by the highest level of its components.
+/// `None` for a word the lists don't have (a name, slang, a rare word).
 pub fn word_level(word: &str) -> Option<Level> {
-    base_forms(word)
-        .iter()
-        .filter_map(|form| WORDS.get(form))
-        .min()
-        .copied()
+    let word = word.to_lowercase();
+
+    ordinal_number_level(&word)
+        .or_else(|| hyphenated_number_level(&word))
+        .or_else(|| {
+            base_forms(&word)
+                .iter()
+                .filter_map(|form| WORDS.get(form))
+                .min()
+                .copied()
+        })
+}
+
+/// Converts an ordinal number word to its cardinal form.
+fn ordinal_cardinal(word: &str) -> Option<String> {
+    let cardinal = match word {
+        "first" => "one",
+        "second" => "two",
+        "third" => "three",
+        "fifth" => "five",
+        "eighth" => "eight",
+        "ninth" => "nine",
+        "twelfth" => "twelve",
+
+        other if other.ends_with("ieth") => {
+            return Some(format!("{}y", other.strip_suffix("ieth")?));
+        }
+
+        other => return Some(other.strip_suffix("th")?.to_string()),
+    };
+
+    Some(cardinal.to_string())
+}
+
+/// The level of an ordinal number, using its cardinal form.
+fn ordinal_number_level(word: &str) -> Option<Level> {
+    let (prefix, ordinal) = word.rsplit_once('-').unwrap_or(("", word));
+
+    let cardinal = ordinal_cardinal(ordinal)?;
+
+    if prefix.is_empty() {
+        NUMBER_WORDS.get(&cardinal).copied()
+    } else {
+        let cardinal = format!("{prefix}-{cardinal}");
+        hyphenated_number_level(&cardinal)
+    }
 }
 
 #[cfg(test)]
@@ -381,5 +454,37 @@ mod tests {
         assert_eq!(Level::of_rank(4.0), Level::B2);
         assert_eq!(Level::of_rank(0.2), Level::A1);
         assert_eq!(Level::of_rank(9.0), Level::C2);
+    }
+
+    #[test]
+    fn hyphenated_number_words_take_the_level_of_their_hardest_part() {
+        assert_eq!(word_level("ninety"), Some(Level::A1));
+        assert_eq!(word_level("nine"), Some(Level::A1));
+        assert_eq!(word_level("ninety-nine"), Some(Level::A1));
+        assert_eq!(word_level("twenty-one"), Some(Level::A1));
+        assert_eq!(word_level("one-hundred"), Some(Level::A2));
+
+        // Ordinary hyphenated words must retain their existing level.
+        assert_eq!(word_level("first-floor"), Some(Level::B1));
+    }
+
+    #[test]
+    fn ordinal_number_words_take_their_cardinal_levels() {
+        let examples = [
+            ("first", "one"),
+            ("fourth", "four"),
+            ("eleventh", "eleven"),
+            ("twentieth", "twenty"),
+            ("twenty-first", "twenty-one"),
+            ("hundredth", "hundred"),
+        ];
+
+        for (ordinal, cardinal) in examples {
+            assert_eq!(
+                word_level(ordinal),
+                word_level(cardinal),
+                "{ordinal} should have the same level as {cardinal}"
+            );
+        }
     }
 }
