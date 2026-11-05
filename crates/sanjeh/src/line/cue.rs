@@ -59,7 +59,7 @@ fn strip_sound_annotations(text: &str) -> String {
                 let content_end = content_start + end;
                 let annotation = &text[content_start..content_end];
 
-                if is_sound_annotation(annotation) {
+                if ch == '[' || is_sound_annotation(annotation) {
                     i = content_end + closing.len_utf8();
                     continue;
                 }
@@ -155,15 +155,19 @@ fn strip_dialogue_dashes(text: &str) -> (String, usize) {
             continue;
         }
 
-        let end = index + ch.len_utf8();
+        let line_start = text[..index].rfind('\n').map_or(0, |position| position + 1);
 
-        let previous = text[..index].chars().next_back();
+        let line_prefix = &text[line_start..index];
+
+        // A dialogue dash must appear at the beginning of a line.
+        if !line_prefix.trim().is_empty() {
+            continue;
+        }
+
+        let end = index + ch.len_utf8();
         let next = text[end..].chars().next();
 
-        let at_boundary = previous.is_none_or(char::is_whitespace);
-        let followed_by_space = next.is_none_or(char::is_whitespace);
-
-        if at_boundary && followed_by_space {
+        if next.is_none_or(char::is_whitespace) {
             ranges.push((index, end));
             markers += 1;
         }
@@ -247,6 +251,22 @@ mod tests {
         let prepared = prepare_cue("- What?");
 
         assert_eq!(prepared.text, "What?");
+        assert_eq!(prepared.voices, 1);
+    }
+
+    #[test]
+    fn strips_any_square_bracket_annotation() {
+        let prepared = prepare_cue("[MUSIC PLAYING] Hello there.");
+
+        assert_eq!(prepared.text, "Hello there.");
+        assert_eq!(prepared.voices, 1);
+    }
+
+    #[test]
+    fn dashes_inside_a_sentence_do_not_count_as_dialogue_markers() {
+        let prepared = prepare_cue("I was - you know - tired.");
+
+        assert_eq!(prepared.text, "I was - you know - tired.");
         assert_eq!(prepared.voices, 1);
     }
 }
