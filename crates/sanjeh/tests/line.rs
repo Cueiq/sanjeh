@@ -215,6 +215,65 @@ fn speech_duration_falls_back_to_subtitle_duration() {
 }
 
 #[test]
+fn speech_duration_falls_back_when_small_hears_too_few_words() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![heard_word("I", Some(100), Some(200))],
+        base: vec![
+            heard_word("I", Some(2000), Some(2100)),
+            heard_word("can", Some(2100), Some(2400)),
+            heard_word("do", Some(2400), Some(3200)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 5000);
+}
+
+#[test]
+fn speech_duration_falls_back_when_no_model_hears_most_words() {
+    let mut input = line("I can do it.", 5000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(1000), Some(1200)),
+            heard_word("can", Some(1200), Some(1500)),
+        ],
+        base: vec![heard_word("I", Some(1500), Some(1700))],
+        tiny: vec![
+            heard_word("I", Some(2000), Some(2200)),
+            heard_word("can", Some(2200), Some(2500)),
+        ],
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 5000);
+}
+
+#[test]
+fn speech_duration_is_clamped_to_subtitle_duration() {
+    let mut input = line("I can do it.", 4000);
+
+    input.heard = Some(Heard {
+        small: vec![
+            heard_word("I", Some(1000), Some(2000)),
+            heard_word("can", Some(2000), Some(3000)),
+            heard_word("do", Some(3000), Some(4000)),
+            heard_word("it", Some(4000), Some(7000)),
+        ],
+        ..Heard::default()
+    });
+
+    let f = facts(&input);
+
+    assert_eq!(f.duration_ms, 4000);
+}
+
+#[test]
 fn a_name_mid_sentence_is_not_a_hard_word() {
     let f = facts(&line("I think I'm ready to pull the trigger on Batman.", 3000));
     assert_eq!(f.names, ["batman"]);

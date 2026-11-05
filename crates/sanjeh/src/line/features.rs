@@ -230,22 +230,43 @@ fn w_readings(word: &str) -> Vec<String> {
 }
 
 /// Returns the speech duration from word timings, when available.
-fn heard_duration_ms(heard: &Heard) -> Option<u32> {
-    for words in [&heard.small, &heard.base, &heard.tiny] {
-        let (Some(first), Some(last)) = (words.first(), words.last()) else {
-            continue;
-        };
+fn heard_duration_ms(heard: &Heard, hearing: &Hearing, duration_ms: u32) -> Option<u32> {
+    let total = hearing
+        .words
+        .iter()
+        .filter(|word| word.kind != WordKind::Filler)
+        .count();
 
-        let (Some(start_ms), Some(end_ms)) = (first.start_ms, last.end_ms) else {
-            continue;
-        };
-
-        if end_ms > start_ms {
-            return Some(end_ms - start_ms);
-        }
+    if total == 0 {
+        return None;
     }
 
-    None
+    let heard_count = hearing
+        .words
+        .iter()
+        .filter(|word| word.kind != WordKind::Filler && word.small)
+        .count();
+
+    // Use timings only when the small model heard more than half the words.
+    if heard_count * 2 <= total {
+        return None;
+    }
+
+    let words = &heard.small;
+
+    let (Some(first), Some(last)) = (words.first(), words.last()) else {
+        return None;
+    };
+
+    let (Some(start_ms), Some(end_ms)) = (first.start_ms, last.end_ms) else {
+        return None;
+    };
+
+    if end_ms > start_ms {
+        Some((end_ms - start_ms).min(duration_ms))
+    } else {
+        None
+    }
 }
 
 fn hard_sounds_of(word: &str, accent: crate::Accent, enabled: &[String]) -> Vec<String> {
@@ -379,10 +400,16 @@ pub fn facts(input: &LineInput) -> Facts {
         vocab -= 0.5;
     }
 
+    let hearing = input
+        .heard
+        .as_ref()
+        .map(|heard| hearing(&tokens, |at| is_name[at], heard));
+
     let duration_ms = input
         .heard
         .as_ref()
-        .and_then(heard_duration_ms)
+        .zip(hearing.as_ref())
+        .and_then(|(heard, hearing)| heard_duration_ms(heard, hearing, input.duration_ms))
         .unwrap_or(input.duration_ms);
 
     // Sound.
@@ -428,11 +455,6 @@ pub fn facts(input: &LineInput) -> Facts {
         .filter(|(rule, _, _)| EAR_MELTS.contains(&rule.as_str()))
         .count()
         + written.len();
-
-    let hearing = input
-        .heard
-        .as_ref()
-        .map(|heard| hearing(&tokens, |at| is_name[at], heard));
 
     let lower = text.to_lowercase().replace('’', "'");
     let lower = lower.trim_start_matches(['"', '“']);
