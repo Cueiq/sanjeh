@@ -373,13 +373,50 @@ pub fn base_forms(word: &str) -> Vec<String> {
 pub fn word_level(word: &str) -> Option<Level> {
     let word = word.to_lowercase();
 
-    hyphenated_number_level(&word).or_else(|| {
-        base_forms(&word)
-            .iter()
-            .filter_map(|form| WORDS.get(form))
-            .min()
-            .copied()
-    })
+    ordinal_number_level(&word)
+        .or_else(|| hyphenated_number_level(&word))
+        .or_else(|| {
+            base_forms(&word)
+                .iter()
+                .filter_map(|form| WORDS.get(form))
+                .min()
+                .copied()
+        })
+}
+
+/// Converts an ordinal number word to its cardinal form.
+fn ordinal_cardinal(word: &str) -> Option<String> {
+    let cardinal = match word {
+        "first" => "one",
+        "second" => "two",
+        "third" => "three",
+        "fifth" => "five",
+        "eighth" => "eight",
+        "ninth" => "nine",
+        "twelfth" => "twelve",
+
+        other if other.ends_with("ieth") => {
+            return Some(format!("{}y", other.strip_suffix("ieth")?));
+        }
+
+        other => return Some(other.strip_suffix("th")?.to_string()),
+    };
+
+    Some(cardinal.to_string())
+}
+
+/// The level of an ordinal number, using its cardinal form.
+fn ordinal_number_level(word: &str) -> Option<Level> {
+    let (prefix, ordinal) = word.rsplit_once('-').unwrap_or(("", word));
+
+    let cardinal = ordinal_cardinal(ordinal)?;
+
+    if prefix.is_empty() {
+        NUMBER_WORDS.get(&cardinal).copied()
+    } else {
+        let cardinal = format!("{prefix}-{cardinal}");
+        hyphenated_number_level(&cardinal)
+    }
 }
 
 #[cfg(test)]
@@ -429,5 +466,25 @@ mod tests {
 
         // Ordinary hyphenated words must retain their existing level.
         assert_eq!(word_level("first-floor"), Some(Level::B1));
+    }
+
+    #[test]
+    fn ordinal_number_words_take_their_cardinal_levels() {
+        let examples = [
+            ("first", "one"),
+            ("fourth", "four"),
+            ("eleventh", "eleven"),
+            ("twentieth", "twenty"),
+            ("twenty-first", "twenty-one"),
+            ("hundredth", "hundred"),
+        ];
+
+        for (ordinal, cardinal) in examples {
+            assert_eq!(
+                word_level(ordinal),
+                word_level(cardinal),
+                "{ordinal} should have the same level as {cardinal}"
+            );
+        }
     }
 }

@@ -97,31 +97,45 @@ fn expand_literal(literal: &str, suffix: &str) -> Option<String> {
             return None;
         }
 
+        if !suffix.is_empty() && !suffix.eq_ignore_ascii_case("am") && !suffix.eq_ignore_ascii_case("pm") {
+            return None;
+        }
+
         let hour: u64 = hour.parse().ok()?;
         let minute: u64 = minute.parse().ok()?;
+
         if hour > 23 || minute > 59 {
             return None;
         }
 
         let mut words = cardinal(hour)?;
         words.push_str(&minute_words(minute)?);
+
+        if !suffix.is_empty() {
+            words.push(' ');
+            words.push_str(&suffix.to_lowercase());
+        }
+
         return Some(words);
     }
 
+    let digits = literal.replace(',', "");
+    // Read ordinal numbers such as 1st, 4th, and 21st.
     if !suffix.is_empty() {
         let value: u64 = literal.replace(',', "").parse().ok()?;
+
         if !matches!(suffix, "st" | "nd" | "rd" | "th") {
             return None;
         }
+
         return ordinal(value);
     }
 
-    let digits = literal.replace(',', "");
     let value: u64 = digits.parse().ok()?;
 
     // Years are conventionally read in pairs, e.g. 1999 -> "nineteen
     // ninety-nine", rather than "one thousand nine hundred ninety-nine".
-    if digits.len() == 4 && (1000..=2099).contains(&value) {
+    if digits.len() == 4 && value != 1000 && (1000..=2099).contains(&value) {
         return year(value);
     }
 
@@ -258,11 +272,22 @@ fn ordinal(n: u64) -> Option<String> {
         other => return Some(format!("{head} {other}th").trim().to_string()),
     };
 
-    Some(if head.is_empty() {
-        last_ordinal.to_string()
+    if head.is_empty() {
+        return Some(last_ordinal.to_string());
+    }
+
+    let last_head_word = head.split_whitespace().last().unwrap_or("");
+
+    let separator = if matches!(
+        last_head_word,
+        "twenty" | "thirty" | "forty" | "fifty" | "sixty" | "seventy" | "eighty" | "ninety"
+    ) {
+        "-"
     } else {
-        format!("{head}-{last_ordinal}")
-    })
+        " "
+    };
+
+    Some(format!("{head}{separator}{last_ordinal}"))
 }
 
 #[cfg(test)]
@@ -284,5 +309,26 @@ mod tests {
     fn leaves_unsupported_numeric_literals_unchanged() {
         assert_eq!(expand_numbers("The value is 1,000,000."), "The value is 1,000,000.");
         assert_eq!(expand_numbers("The ratio is 1.5."), "The ratio is 1.5.");
+    }
+
+    #[test]
+    fn expands_ordinals_with_correct_spacing() {
+        assert_eq!(
+            expand_numbers("4th, 11th, 21st, and 101st."),
+            "fourth, eleventh, twenty-first, and one hundred first."
+        );
+    }
+
+    #[test]
+    fn expands_multiples_of_thousand_as_cardinals() {
+        assert_eq!(
+            expand_numbers("1000, 2000, and 3000."),
+            "one thousand, two thousand, and three thousand."
+        );
+    }
+
+    #[test]
+    fn preserves_time_suffixes() {
+        assert_eq!(expand_numbers("Meet me at 9:30pm."), "Meet me at nine thirty pm.");
     }
 }
