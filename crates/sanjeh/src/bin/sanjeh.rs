@@ -6,7 +6,7 @@
 //! sanjeh level <word>…                                 each word's CEFR level, by the open lists
 //! sanjeh alike [--us|--gb] [--level <A1…C2>] [--language fa] [--kind same,ending,near] [--most <n>] <word>
 //!                                                      the known words that sound like it
-//! sanjeh line show [--gb] --ms <duration> <line>      a line measured, in plain words
+//! sanjeh line show [--gb] [--language fa] --ms <duration> <line>     a line measured, in plain words
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
 //! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
 //! sanjeh line bench    <items.jsonl> [--model <file>] [--split fit|test|all]
@@ -23,7 +23,9 @@ use sanjeh::bench::{Item, report};
 use sanjeh::connected::{melted, melts};
 use sanjeh::levels::Level;
 use sanjeh::levels::word_level;
-use sanjeh::line::{LineInput, LineModel, Reason, Skill, SkillMeasure, WhyNot, facts, measure, prepare_cue};
+use sanjeh::line::{
+    LineInput, LineModel, Reason, Skill, SkillMeasure, WhyNot, facts, measure, prepare_cue, validate_language,
+};
 use sanjeh::{Accent, Pronounced, pronounce, readings};
 
 fn main() -> ExitCode {
@@ -57,9 +59,15 @@ fn read_text(path: &str) -> Result<String, String> {
 fn read_items(path: &str) -> Result<Vec<Item>, String> {
     let text = read_text(path)?;
     text.lines()
-        .filter(|l| !l.trim().is_empty())
+        .filter(|line| !line.trim().is_empty())
         .enumerate()
-        .map(|(at, l)| serde_json::from_str(l).map_err(|e| format!("{path}:{}: {e}", at + 1)))
+        .map(|(at, line)| {
+            let item: Item = serde_json::from_str(line).map_err(|e| format!("{path}:{}: {e}", at + 1))?;
+
+            validate_language(item.input.language.as_deref()).map_err(|e| format!("{path}:{}: {e}", at + 1))?;
+
+            Ok(item)
+        })
         .collect()
 }
 
@@ -182,13 +190,17 @@ fn run(args: &[String]) -> Result<(), String> {
             let ms: u32 = option(args, "--ms")
                 .and_then(|ms| ms.parse().ok())
                 .ok_or("--ms <how long it is said, in milliseconds> is needed")?;
+
+            let language = option(args, "--language").map(str::to_string);
+            validate_language(language.as_deref())?;
+
             let prepared = prepare_cue(&text_of(&args[1..]));
 
             let input = LineInput {
                 text: prepared.text,
                 duration_ms: ms,
                 accent: accent_of(args),
-                language: None,
+                language,
                 voices: prepared.voices,
                 heard: None,
                 entries: vec![],
@@ -285,11 +297,14 @@ fn run(args: &[String]) -> Result<(), String> {
         "measure" => {
             let model = read_model(args)?;
             let text = read_text(path)?;
-            for line in text.lines().filter(|l| !l.trim().is_empty()) {
+            for (at, line) in text.lines().enumerate().filter(|(_, line)| !line.trim().is_empty()) {
                 let input: LineInput = serde_json::from_str::<Item>(line)
                     .map(|item| item.input)
                     .or_else(|_| serde_json::from_str(line))
                     .map_err(|e| format!("{path}: {e}"))?;
+
+                validate_language(input.language.as_deref()).map_err(|e| format!("{path}:{}: {e}", at + 1))?;
+
                 println!(
                     "{}",
                     serde_json::to_string(&measure(&input, &model)).map_err(|e| e.to_string())?

@@ -191,8 +191,29 @@ static HARD_SOUND_PROFILES: LazyLock<BTreeMap<String, Vec<String>>> = LazyLock::
 
 /// The hard sounds to use for a learner's first language.
 fn hard_sound_profile(language: Option<&str>) -> &'static [String] {
-    let language = language.unwrap_or("fa");
+    let language = language.unwrap_or("fa").trim().to_lowercase();
+    let language = language.split('-').next().unwrap_or("fa");
+
     HARD_SOUND_PROFILES.get(language).map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// Checks whether a first language has a hard-sound profile.
+pub fn validate_language(language: Option<&str>) -> Result<(), String> {
+    let Some(language) = language else {
+        return Ok(());
+    };
+
+    let normalized = language.trim().to_ascii_lowercase();
+    let base_language = normalized.split('-').next().unwrap_or("");
+
+    if HARD_SOUND_PROFILES.contains_key(base_language) {
+        Ok(())
+    } else {
+        Err(format!(
+            "unsupported language {language:?}; supported languages: {}",
+            HARD_SOUND_PROFILES.keys().cloned().collect::<Vec<_>>().join(", ")
+        ))
+    }
 }
 
 /// How many syllables a word has: its sound's vowels, or its spelling's.

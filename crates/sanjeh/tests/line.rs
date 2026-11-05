@@ -1,7 +1,7 @@
 //! The line measure on lines: what can't be practised and why, what makes a
 //! line hard, and a model's weights at work.
 
-use sanjeh::line::{Heard, HeardWord, LineInput, LineModel, Reason, Skill, WhyNot, facts, measure};
+use sanjeh::line::{Heard, HeardWord, LineInput, LineModel, Reason, Skill, WhyNot, facts, measure, validate_language};
 
 fn line(text: &str, ms: u32) -> LineInput {
     serde_json::from_value(serde_json::json!({ "text": text, "duration_ms": ms })).unwrap()
@@ -381,13 +381,33 @@ fn persian_hard_sounds_are_used_when_language_is_explicit() {
 }
 
 #[test]
-fn an_unknown_language_does_not_use_the_persian_profile() {
+fn language_codes_are_case_insensitive() {
     let mut input = line("There are no bad situations as long as I'm with you.", 4700);
-    input.language = Some("unknown".to_string());
+    input.language = Some("FA".to_string());
 
-    let f = facts(&input);
+    let facts = facts(&input);
 
-    assert!(f.hard_sounds.is_empty());
+    assert!(
+        facts
+            .hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "with")
+    );
+}
+
+#[test]
+fn regional_language_codes_use_the_base_language_profile() {
+    let mut input = line("There are no bad situations as long as I'm with you.", 4700);
+    input.language = Some("fa-IR".to_string());
+
+    let facts = facts(&input);
+
+    assert!(
+        facts
+            .hard_sounds
+            .iter()
+            .any(|(sound, word)| sound == "th" && word == "with")
+    );
 }
 
 #[test]
@@ -413,4 +433,18 @@ fn language_defaults_to_none_for_older_inputs() {
     let input = line("There are no bad situations.", 2500);
 
     assert_eq!(input.language, None);
+}
+
+#[test]
+fn unsupported_language_is_rejected() {
+    assert!(validate_language(Some("es")).is_err());
+    assert!(validate_language(Some("unknown")).is_err());
+}
+
+#[test]
+fn supported_language_variants_are_accepted() {
+    assert!(validate_language(Some("fa")).is_ok());
+    assert!(validate_language(Some("FA")).is_ok());
+    assert!(validate_language(Some("fa-IR")).is_ok());
+    assert!(validate_language(None).is_ok());
 }

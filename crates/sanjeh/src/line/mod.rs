@@ -22,7 +22,7 @@ mod numbers;
 pub use cue::{PreparedCue, prepare_cue};
 use serde::{Deserialize, Serialize};
 
-pub use features::{Facts, Features, facts};
+pub use features::{Facts, Features, facts, validate_language};
 pub use heard::{Heard, HeardWord};
 pub use model::{LineModel, LinearModel, SkillModel};
 
