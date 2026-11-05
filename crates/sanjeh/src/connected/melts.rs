@@ -105,22 +105,35 @@ fn phrased(line: &str) -> Vec<(Range<usize>, usize)> {
     while at < chars.len() {
         let (start, c) = chars[at];
 
-        let leading_fusion = ["'cause", "'em", "’cause", "’em"].into_iter().find(|fusion| {
-            line[start..].starts_with(fusion)
-                && line[start + fusion.len()..]
-                    .chars()
-                    .next()
-                    .is_none_or(|next| !next.is_alphanumeric() && !matches!(next, '\'' | '’' | '-'))
+        let rest = &line[start..];
+        let normalized_rest = rest.to_lowercase().replace('’', "'");
+
+        let leading_fusion = connected_speech().fusions.iter().find_map(|fusion| {
+            let sound = fusion.sound.to_lowercase().replace('’', "'");
+
+            if !sound.starts_with('\'') || !normalized_rest.starts_with(&sound) {
+                return None;
+            }
+
+            let end = rest
+                .char_indices()
+                .nth(sound.chars().count())
+                .map_or(line.len(), |(offset, _)| start + offset);
+
+            let next = line[end..].chars().next();
+
+            next.is_none_or(|next| !next.is_alphanumeric() && !matches!(next, '\'' | '’' | '-'))
+                .then_some(end)
         });
 
-        if let Some(fusion) = leading_fusion {
+        if let Some(end) = leading_fusion {
             if paused && !words.is_empty() {
                 phrase += 1;
             }
             paused = false;
 
-            words.push((start..start + fusion.len(), phrase));
-            at += fusion.chars().count();
+            words.push((start..end, phrase));
+            at += line[start..end].chars().count();
             continue;
         }
 
@@ -358,6 +371,15 @@ fn fusions(words: &[Word], accent: Accent, taken: &mut [bool], found: &mut Vec<M
     while at < words.len() {
         let fused = data.fusions.iter().find_map(|fusion| {
             let parts: Vec<&str> = fusion.words.split(' ').collect();
+            // Let the contextual "them" rule take precedence over the standalone fusion.
+            if fusion.words == "them"
+                && at > 0
+                && words[at - 1].phrase == words[at].phrase
+                && words[at - 1].ipa.is_some()
+                && !taken[at - 1]
+            {
+                return None;
+            }
             let end = at + parts.len();
             let these = words.get(at..end)?;
             let same = these.iter().zip(&parts).all(|(word, part)| word.lower == *part)

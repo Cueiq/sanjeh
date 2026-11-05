@@ -124,6 +124,12 @@ fn the_word_lists_are_whole_and_the_examples_in_them() {
     assert_eq!(weak.len(), data.weak_forms.len(), "a weak form listed twice");
     let fused: HashSet<&str> = data.fusions.iter().map(|fusion| fusion.words.as_str()).collect();
     assert_eq!(fused.len(), data.fusions.len(), "a fusion listed twice");
+    let sounds: HashSet<&str> = data.fusions.iter().map(|fusion| fusion.sound.as_str()).collect();
+    assert_eq!(
+        sounds.len(),
+        data.fusions.len(),
+        "a written fusion sound listed more than once"
+    );
     for form in &data.weak_forms {
         assert!(has_both(&form.ipa) && !form.sound.is_empty(), "{}", form.word);
     }
@@ -147,36 +153,37 @@ fn the_word_lists_are_whole_and_the_examples_in_them() {
 }
 
 #[test]
-fn written_single_word_fusions_are_found() {
+fn full_form_fusions_are_found() {
     let cases = [
-        ("kinda", "kinda"),
-        ("sorta", "sorta"),
-        ("dunno", "dunno"),
-        ("lemme", "lemme"),
-        ("gimme", "gimme"),
-        ("c'mon", "c'mon"),
-        ("cannot", "cannot"),
-        ("'cause", "'cause"),
-        ("'em", "'em"),
+        ("kind of", "kinda"),
+        ("sort of", "sorta"),
+        ("don't know", "dunno"),
+        ("let me", "lemme"),
+        ("give me", "gimme"),
+        ("come on", "c'mon"),
+        ("can not", "cannot"),
+        ("because", "'cause"),
+        ("them", "'em"),
     ];
 
     for (input, expected_sound) in cases {
         for accent in [Accent::Us, Accent::Gb] {
             let results = melts(input, accent);
-            let fusion = results
-                .iter()
-                .find(|melt| melt.rule == "fusion")
-                .unwrap_or_else(|| panic!("{input}: fusion not found for {accent:?}"));
 
-            assert_eq!(fusion.sound, expected_sound, "{input}, {accent:?}");
-            assert!(!fusion.ipa.is_empty(), "{input}, {accent:?}: empty IPA");
+            let fusions: Vec<_> = results.iter().filter(|melt| melt.rule == "fusion").collect();
+
+            assert_eq!(fusions.len(), 1, "{input}: expected exactly one fusion for {accent:?}");
+
+            assert_eq!(fusions[0].sound, expected_sound, "{input}, {accent:?}");
+
+            assert!(!fusions[0].ipa.is_empty(), "{input}, {accent:?}: empty IPA");
         }
     }
 }
 
 #[test]
 fn leading_apostrophe_fusions_keep_their_apostrophe() {
-    for input in ["'cause", "'em"] {
+    for input in ["'cause", "'em", "'Cause", "'EM", "’cause", "’em"] {
         let words = line_words(input);
 
         assert_eq!(words.len(), 1, "{input}");

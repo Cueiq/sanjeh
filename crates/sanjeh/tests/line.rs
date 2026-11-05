@@ -67,16 +67,58 @@ fn a_pair_written_as_said_and_its_melts_are_reasons() {
 }
 
 #[test]
-fn leading_apostrophe_fusions_are_reasons_in_line_analysis() {
-    for text in ["I did it 'cause I could.", "Tell 'em what happened."] {
+fn leading_apostrophe_fusions_are_written_reasons_in_line_analysis() {
+    let cases = [
+        ("I did it 'cause I could.", "'cause", "because"),
+        ("Tell 'em what happened.", "'em", "them"),
+        ("'Cause I said so.", "'cause", "because"),
+    ];
+
+    for (text, short, full) in cases {
         let f = facts(&line(text, 3000));
         let reasons = f.reasons(Skill::Ear);
 
         assert!(
-            reasons
-                .iter()
-                .any(|reason| matches!(reason, Reason::Melt { rule, .. } if rule == "fusion")),
-            "{text}: expected a fusion reason"
+            reasons.contains(&Reason::Written {
+                word: short.into(),
+                full: full.into(),
+            }),
+            "{text}: expected Written reason for {short}"
+        );
+    }
+}
+
+#[test]
+fn spoken_fusions_use_full_forms_for_word_levels() {
+    let cases = [
+        ("I did it 'cause I could.", "I did it because I could."),
+        ("Tell 'em what happened.", "Tell them what happened."),
+        ("I kinda like it.", "I kind of like it."),
+        ("I dunno what happened.", "I don't know what happened."),
+        ("They shouted c'mon, let's go.", "They shouted come on, let's go."),
+        ("I cannot do that.", "I can not do that."),
+        ("I heard someone say lemme see.", "I heard someone say let me see."),
+        ("I heard someone say gimme that.", "I heard someone say give me that."),
+        ("I sorta like it.", "I sort of like it."),
+    ];
+
+    for (short_form, full_form) in cases {
+        let short = facts(&line(short_form, 3000));
+        let full = facts(&line(full_form, 3000));
+
+        assert_eq!(
+            short.hard_words, full.hard_words,
+            "{short_form}: hard words differ from {full_form}"
+        );
+
+        assert_eq!(
+            short.common, full.common,
+            "{short_form}: common-word ratio differs from {full_form}"
+        );
+
+        assert_eq!(
+            short.features["vocab"], full.features["vocab"],
+            "{short_form}: vocabulary level differs from {full_form}"
         );
     }
 }

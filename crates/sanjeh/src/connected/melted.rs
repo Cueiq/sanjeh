@@ -155,7 +155,13 @@ mod tests {
 
     #[test]
     fn two_joints_over_one_word_run_on() {
-        assert_eq!(said("Come on. Rise and shine.", Accent::Gb), ["Co-mon", "Ri-zan shine"]);
+        let found = melts("Pick it up.", Accent::Gb);
+
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].rule, "linking");
+        assert_eq!(found[0].words, 0..3);
+
+        assert_eq!(said("Pick it up.", Accent::Gb), ["Pi-ki-tup"]);
         assert_eq!(said("I have this car at home.", Accent::Gb), ["ca-ra' home"]);
     }
 
