@@ -91,6 +91,10 @@ pub enum PlacementError {
     /// An answer is for an item the bank doesn't have: a typo, or an answer
     /// from another version of the bank. Dropping it silently would lose it.
     UnknownItem(String),
+    /// An item can't be scored: its difficulty or discrimination isn't finite,
+    /// or its discrimination isn't positive. A fitted 2PL model can give one
+    /// of these, and scoring it would give a meaningless level.
+    BadItem(String),
 }
 
 /// When a part of the test stops: once the standard error is below `se`, or
@@ -120,6 +124,12 @@ impl Default for Cuts {
 }
 
 impl Item {
+    /// Whether the item can be scored: its difficulty and discrimination are
+    /// finite, and its discrimination is positive. A negative one would turn
+    /// the scoring upside down, and a NaN would make every weight NaN.
+    fn is_usable(&self) -> bool {
+        self.difficulty.is_finite() && self.discrimination.is_finite() && self.discrimination > 0.0
+    }
     /// Probability that a learner of ability `theta` answers a word correctly.
     /// Uses 2-parameter logistic model (2PL).
     #[inline]
@@ -147,8 +157,9 @@ impl Item {
 ///
 /// A prior whose mean isn't finite, or whose SD isn't positive and finite,
 /// is refused with `PlacementError::BadPrior`. An answer for an item the
-/// bank doesn't have is refused with `PlacementError::UnknownItem`. An
-/// answer with more words right than asked counts as all right.
+/// bank doesn't have is refused with `PlacementError::UnknownItem`, and one
+/// for an item that can't be scored (see `PlacementError::BadItem`) with that
+/// error. An answer with more words right than asked counts as all right.
 pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimate, PlacementError> {
     const GRID_SIZE: usize = 121;
     const MIN_THETA: f64 = -1.0;
@@ -168,6 +179,9 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimat
         let item = bank
             .get(&answer.item)
             .ok_or_else(|| PlacementError::UnknownItem(answer.item.clone()))?;
+        if !item.is_usable() {
+            return Err(PlacementError::BadItem(item.id.clone()));
+        }
         let right = answer.right.min(answer.of);
         counted.push((item, right as f64, (answer.of - right) as f64));
     }
@@ -242,11 +256,14 @@ const BEST_FEW: usize = 3;
 /// items already taken is mixed into it here, so each item gets a fresh draw
 /// and the same seed still gives the same test, item by item. Another seed
 /// gives another test.
+///
+/// An item that can't be scored (see `Item::is_usable`) is never given, so a
+/// bad item in the bank can't be chosen first.
 pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item> {
     let mut candidates: Vec<(&Item, f64)> = bank
         .items
         .iter()
-        .filter(|item| item.task == part && !taken.iter().any(|id| id == &item.id))
+        .filter(|item| item.is_usable() && item.task == part && !taken.iter().any(|id| id == &item.id))
         .map(|item| (item, item.information(now.theta)))
         .collect();
 
@@ -254,8 +271,7 @@ pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task
         return None;
     }
 
-    candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
+    candidates.sort_by(|a, b| b.1.total_cmp(&a.1));
     let pool_size = candidates.len().min(BEST_FEW);
     let draw = seed.wrapping_add((taken.len() as u64).wrapping_mul(0x9e3779b97f4a7c15));
     let chosen_idx = pseudo_random_index(draw, pool_size);
@@ -614,5 +630,73 @@ mod tests {
             estimate(&too_many, &bank, prior).unwrap(),
             estimate(&all_right, &bank, prior).unwrap()
         );
+    }
+
+    /// Items that can't be scored: a fitted 2PL model can give one of these.
+    fn unusable_items() -> Vec<Item> {
+        let base = Item {
+            id: "bad".to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty: 3.0,
+            discrimination: 1.0,
+            words: 5,
+        };
+        vec![
+            Item {
+                difficulty: f64::NAN,
+                ..base.clone()
+            },
+            Item {
+                difficulty: f64::INFINITY,
+                ..base.clone()
+            },
+            Item {
+                discrimination: f64::NAN,
+                ..base.clone()
+            },
+            Item {
+                discrimination: 0.0,
+                ..base.clone()
+            },
+            Item {
+                discrimination: -1.0,
+                ..base.clone()
+            },
+        ]
+    }
+
+    #[test]
+    fn an_answer_for_a_bad_item_is_refused() {
+        for bad in unusable_items() {
+            let bank = Bank { items: vec![bad] };
+            let answers = vec![Answer {
+                item: "bad".to_string(),
+                right: 5,
+                of: 5,
+            }];
+            assert_eq!(
+                estimate(&answers, &bank, Prior::centred_on(3.0)),
+                Err(PlacementError::BadItem("bad".to_string()))
+            );
+        }
+    }
+
+    #[test]
+    fn a_bad_item_is_never_given() {
+        let now = Estimate { theta: 3.0, se: 0.8 };
+        for bad in unusable_items() {
+            let mut bank = sample_bank();
+            bank.items.push(bad);
+            for seed in 0..50 {
+                let item = next_item(&bank, now, &[], Task::Dictation, seed).unwrap();
+                assert_ne!(item.id, "bad");
+            }
+        }
+        // A bank of nothing else gives nothing, and doesn't panic.
+        let only_bad = Bank {
+            items: unusable_items(),
+        };
+        assert!(next_item(&only_bad, now, &[], Task::Dictation, 1).is_none());
     }
 }
