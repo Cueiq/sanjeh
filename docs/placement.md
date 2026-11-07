@@ -1,8 +1,9 @@
 # Placement: a learner's level for listening and speaking
 
 *Status: design, 2026-10-15. The engine (`estimate`, `next_item`, `finished`
-and `level`) is built, in `crates/sanjeh/src/placement.rs`; the rest is not
-built yet. The issues that build it are listed [at the end](#the-work).*
+and `level`) and the practice update (`update`) are built, in
+`crates/sanjeh/src/placement.rs`; the rest is not built yet. The issues that
+build it are listed [at the end](#the-work).*
 
 ## Goal
 
@@ -172,7 +173,7 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimat
 pub fn next_item<'a>(bank: &'a Bank, now: Estimate, taken: &[String], part: Task, seed: u64) -> Option<&'a Item>;
 pub fn finished(now: Estimate, asked: usize, rule: StopRule) -> bool;
 pub fn level(theta: f64, cuts: Cuts) -> Level;
-pub fn update(now: Estimate, item: &Item, answer: &Answer) -> Estimate;   // keeping it up to date (not built yet)
+pub fn update(now: Estimate, item: &Item, answer: &Answer) -> Result<Estimate, PlacementError>;   // keeping it up to date
 ```
 
 `Estimate`, `StopRule` and `Cuts` are `Copy`, so they are passed by value.
@@ -181,7 +182,25 @@ and finite, and an answer for an item the bank doesn't have; an answer with
 more words right than asked counts as all right. `next_item` takes one `seed`
 for a whole test: the number of items already taken is mixed into it, so each
 item is a fresh draw and the same seed still gives the same test. `update` is
-the work of [#22](https://github.com/Cueiq/sanjeh/issues/22).
+`estimate` with the current estimate as the prior and one answer, so it agrees
+with estimating from all the answers at once. Its standard error never falls
+below 0.15, so a learner who has practised for months can still move. It takes
+answers to lines written down or shadowed; a vote on a line (too easy, just
+right, too hard) can't be fed in yet, and is left for later in
+[#22](https://github.com/Cueiq/sanjeh/issues/22).
+
+An app keeps a learner's level up to date by feeding `update` one practice
+answer at a time, starting from the placement estimate:
+
+```rust
+// `level` starts as the estimate from the placement test, an `Estimate`.
+let mut level = placed;
+for (line, answer) in practice_results {   // an `&Item` and its `Answer`
+    level = update(level, line, &answer)?;
+}
+// level.theta is on the same scale as `line`'s levels, so the app can pick
+// the next lines near it.
+```
 
 Scoring an answer (which words were right) is the caller's: it depends on
 how the answer was given (typed, spoken) and is not part of placement.
