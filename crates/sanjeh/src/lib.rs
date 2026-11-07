@@ -9,6 +9,7 @@ pub mod bench;
 pub mod connected;
 pub mod levels;
 pub mod line;
+pub mod placement;
 mod pronounce;
 pub use pronounce::{Accent, Pronounced, pronounce, readings, warm_pronouncing};
 
