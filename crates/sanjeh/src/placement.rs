@@ -306,6 +306,68 @@ pub fn level(theta: f64, cuts: Cuts) -> Level {
     }
 }
 
+/// The least the standard error of a practised estimate is allowed to fall
+/// to. Without a floor, hundreds of practice answers shrink it to nothing
+/// (the grid's step is 0.075, so it can't hold less) and a learner who
+/// improves or slips would no longer move. It also decides how far one bad
+/// session pulls a learner who has practised for months. 0.15 is twice the
+/// grid's step and a starting value, not a measured one: simulation (#13) is
+/// meant to set it, as it sets the stopping rule. A test pins the size of
+/// that pull, so a change to the number is a visible one.
+const MIN_SE: f64 = 0.15;
+
+/// Keep a learner's estimate up to date from one answer to practice.
+///
+/// It is `estimate` with the current estimate as the prior and the one
+/// answer, so it agrees with estimating from all the answers at once, within
+/// a small tolerance, and a longer line moves the estimate further than a
+/// short one. The result stays on `estimate`'s grid (-1 to 8), and its
+/// standard error never falls below `MIN_SE`.
+///
+/// `answer` must be for `item`. An estimate whose `theta` or `se` isn't
+/// finite is refused with `PlacementError::BadPrior`, and an item that can't
+/// be scored with `PlacementError::BadItem`.
+///
+/// An app feeds it one practice answer at a time, starting from the estimate
+/// of the placement test (or of a learner's last session):
+///
+/// ```
+/// use sanjeh::line::Skill;
+/// use sanjeh::placement::{update, Answer, Estimate, Item, Task};
+///
+/// let line = Item {
+///     id: "line-1".to_string(),
+///     skill: Skill::Ear,
+///     task: Task::Dictation,
+///     difficulty: 3.0,
+///     discrimination: 1.0,
+///     words: 6,
+/// };
+/// let mut level = Estimate { theta: 3.0, se: 1.0 };
+/// // The learner wrote down 5 of the line's 6 words.
+/// let answer = Answer { item: "line-1".to_string(), right: 5, of: 6 };
+/// level = update(level, &line, &answer).unwrap();
+/// assert!(level.theta > 3.0);
+/// assert!(level.se < 1.0);
+/// ```
+pub fn update(now: Estimate, item: &Item, answer: &Answer) -> Result<Estimate, PlacementError> {
+    // The estimate is checked before anything else, so a NaN can't come back
+    // as if it were a result.
+    if !now.theta.is_finite() || !now.se.is_finite() || now.se <= 0.0 {
+        return Err(PlacementError::BadPrior);
+    }
+    let bank = Bank {
+        items: vec![item.clone()],
+    };
+    let prior = Prior {
+        mean: now.theta,
+        sd: now.se.max(MIN_SE),
+    };
+    let mut updated = estimate(std::slice::from_ref(answer), &bank, prior)?;
+    updated.se = updated.se.max(MIN_SE);
+    Ok(updated)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -629,6 +691,212 @@ mod tests {
         assert_eq!(
             estimate(&too_many, &bank, prior).unwrap(),
             estimate(&all_right, &bank, prior).unwrap()
+        );
+    }
+
+    /// A line of `words` words at `difficulty`, for practice.
+    fn practice_line(id: &str, difficulty: f64, words: u32) -> Item {
+        Item {
+            id: id.to_string(),
+            skill: Skill::Ear,
+            task: Task::Dictation,
+            difficulty,
+            discrimination: 1.0,
+            words,
+        }
+    }
+
+    /// An answer to `item` with `right` of its words right.
+    fn answer_for(item: &Item, right: u32) -> Answer {
+        Answer {
+            item: item.id.clone(),
+            right,
+            of: item.words,
+        }
+    }
+
+    #[test]
+    fn update_climbs_on_better_than_expected() {
+        let item = practice_line("i1", 3.0, 5);
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let updated = update(now, &item, &answer_for(&item, 5)).unwrap();
+        assert!(updated.theta > now.theta);
+        assert!(updated.se < now.se);
+    }
+
+    #[test]
+    fn update_falls_on_worse_than_expected() {
+        let item = practice_line("i1", 3.0, 5);
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let updated = update(now, &item, &answer_for(&item, 0)).unwrap();
+        assert!(updated.theta < now.theta);
+        assert!(updated.se < now.se);
+    }
+
+    #[test]
+    fn update_with_no_words_asked_changes_almost_nothing() {
+        let item = practice_line("i1", 3.0, 0);
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let nothing_asked = Answer {
+            item: "i1".to_string(),
+            right: 0,
+            of: 0,
+        };
+        let updated = update(now, &item, &nothing_asked).unwrap();
+        assert!((updated.theta - now.theta).abs() < 0.01);
+        assert!((updated.se - now.se).abs() < 0.01);
+    }
+
+    #[test]
+    fn update_refuses_what_it_cannot_use() {
+        let item = practice_line("i1", 3.0, 5);
+        let ans = answer_for(&item, 5);
+        let bad_estimates = [
+            Estimate {
+                theta: f64::NAN,
+                se: 0.5,
+            },
+            Estimate {
+                theta: f64::INFINITY,
+                se: 0.5,
+            },
+            Estimate {
+                theta: 3.0,
+                se: f64::NAN,
+            },
+            Estimate { theta: 3.0, se: 0.0 },
+            Estimate { theta: 3.0, se: -1.0 },
+        ];
+        for now in bad_estimates {
+            assert_eq!(update(now, &item, &ans), Err(PlacementError::BadPrior));
+        }
+
+        // With no words asked, a NaN used to come back as `Ok`.
+        let nothing_asked = Answer {
+            item: "i1".to_string(),
+            right: 0,
+            of: 0,
+        };
+        let nan = Estimate {
+            theta: f64::NAN,
+            se: 0.5,
+        };
+        assert_eq!(update(nan, &item, &nothing_asked), Err(PlacementError::BadPrior));
+
+        // What `estimate` refuses, `update` refuses.
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let bad_item = Item {
+            discrimination: 0.0,
+            ..item.clone()
+        };
+        assert_eq!(
+            update(now, &bad_item, &ans),
+            Err(PlacementError::BadItem("i1".to_string()))
+        );
+        let other = Answer {
+            item: "other".to_string(),
+            right: 1,
+            of: 1,
+        };
+        assert_eq!(
+            update(now, &item, &other),
+            Err(PlacementError::UnknownItem("other".to_string()))
+        );
+    }
+
+    #[test]
+    fn update_agrees_with_estimating_from_all_the_answers() {
+        // Twenty six-word lines, from 3.0 to 4.4, with 2 to 5 words right.
+        let items: Vec<Item> = (0..20)
+            .map(|i| practice_line(&format!("line_{i}"), 3.0 + 1.4 * (i as f64) / 19.0, 6))
+            .collect();
+        let answers: Vec<Answer> = items
+            .iter()
+            .enumerate()
+            .map(|(i, item)| answer_for(item, 2 + (i as u32) % 4))
+            .collect();
+        let bank = Bank { items: items.clone() };
+        let prior = Prior::centred_on(3.0);
+        let mut now = Estimate {
+            theta: prior.mean,
+            se: prior.sd,
+        };
+        for (k, (item, answer)) in items.iter().zip(&answers).enumerate() {
+            now = update(now, item, answer).unwrap();
+            let all = estimate(&answers[..=k], &bank, prior).unwrap();
+            assert!(
+                (now.theta - all.theta).abs() < 0.05,
+                "after {} answers: update {:.3}, estimate {:.3}",
+                k + 1,
+                now.theta,
+                all.theta
+            );
+            assert!(
+                (now.se - all.se.max(MIN_SE)).abs() < 0.05,
+                "after {} answers: update SE {:.3}, estimate SE {:.3}",
+                k + 1,
+                now.se,
+                all.se
+            );
+        }
+    }
+
+    #[test]
+    fn update_keeps_the_level_on_the_scale() {
+        let top = practice_line("top", 6.0, 6);
+        let bottom = practice_line("bottom", 1.0, 6);
+        let mut high = Estimate { theta: 5.0, se: 0.5 };
+        let mut low = Estimate { theta: 2.0, se: 0.5 };
+        for _ in 0..300 {
+            high = update(high, &top, &answer_for(&top, 6)).unwrap();
+            low = update(low, &bottom, &answer_for(&bottom, 0)).unwrap();
+            assert!((-1.0..=8.0).contains(&high.theta));
+            assert!((-1.0..=8.0).contains(&low.theta));
+        }
+        assert_eq!(level(high.theta, Cuts::default()), Level::C2);
+        assert_eq!(level(low.theta, Cuts::default()), Level::A1);
+    }
+
+    #[test]
+    fn a_longer_line_moves_the_level_further() {
+        let short = practice_line("short", 3.0, 1);
+        let long = practice_line("long", 3.0, 12);
+        let now = Estimate { theta: 3.0, se: 0.5 };
+        let by_short = update(now, &short, &answer_for(&short, 1)).unwrap();
+        let by_long = update(now, &long, &answer_for(&long, 12)).unwrap();
+        assert!(by_long.theta > by_short.theta);
+    }
+
+    #[test]
+    fn the_standard_error_shrinks_with_each_answer_down_to_its_floor() {
+        let item = practice_line("i1", 3.0, 6);
+        let mut now = Estimate { theta: 3.0, se: 1.2 };
+        for _ in 0..500 {
+            let next = update(now, &item, &answer_for(&item, 3)).unwrap();
+            assert!(next.se <= now.se + 1e-9);
+            now = next;
+        }
+        assert!((now.se - MIN_SE).abs() < 1e-9);
+    }
+
+    #[test]
+    fn one_bad_session_pulls_a_practised_learner_a_known_distance() {
+        let item = practice_line("i1", 4.0, 6);
+        let mut now = Estimate { theta: 4.0, se: 1.2 };
+        // 500 steady lines at the learner's level, half the words right.
+        for _ in 0..500 {
+            now = update(now, &item, &answer_for(&item, 3)).unwrap();
+        }
+        assert!((now.theta - 4.0).abs() < 0.1);
+        // Then a bad session: ten lines with no word right. This pins how
+        // far MIN_SE lets that pull a learner; change MIN_SE and this moves.
+        for _ in 0..10 {
+            now = update(now, &item, &answer_for(&item, 0)).unwrap();
+        }
+        assert!(
+            now.theta > 3.3 && now.theta < 3.6,
+            "a bad session took the level to {:.3}",
+            now.theta
         );
     }
 
