@@ -82,7 +82,7 @@ const SAME: &[(&str, &str)] = &[
 /// slashes, its common other spelling — and a run-together form its words.
 pub fn normal(word: &str) -> Vec<String> {
     let word = word.to_lowercase().replace(['’', '‘'], "'");
-    let word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'');
+    let word = word.trim_matches(|c: char| !c.is_alphanumeric());
     let word = SAME
         .iter()
         .find(|(form, _)| *form == word)
@@ -311,8 +311,25 @@ mod tests {
         assert_eq!(h.miss_tiny, 0.0);
     }
     #[test]
-    fn punctuation_is_stripped_from_words() {
-        assert_eq!(normal("Tell him."), vec!["tell", "him"]);
-        assert_eq!(normal("tonight,"), vec!["tonight"]);
+    fn punctuation_and_apostrophes_at_a_words_edge_are_not_heard_as_misses() {
+        // The line's words as the measure cuts them (no apostrophe at an
+        // edge); Whisper writes `him.`, `'til`, `goin'`, `'em` and `'go'`.
+        let text = "Tell him. Wait 'til tomorrow. I'm goin' home. Get 'em! He said 'go'.";
+        let line: Vec<String> = crate::connected::line_words(text)
+            .into_iter()
+            .map(|at| text[at].to_string())
+            .collect();
+        let said = heard(text);
+        let h = hearing(
+            &line,
+            |_| false,
+            &Heard {
+                tiny: said.clone(),
+                base: said.clone(),
+                small: said,
+            },
+        );
+        assert_eq!((h.miss_tiny, h.miss_base, h.miss_small), (0.0, 0.0, 0.0));
+        assert_eq!(normal("don't"), vec!["don't"]);
     }
 }
