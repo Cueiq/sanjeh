@@ -10,6 +10,7 @@
 //! sanjeh line features <items.jsonl>                  each item's features, for fitting a model
 //! sanjeh line measure  <lines.jsonl> [--model <file>]  each line measured
 //! sanjeh line bench    <items.jsonl> [--model <file>] [--split fit|test|all]
+//! sanjeh line hear     <clips.wav...> [--model <file>] decode audio clips using whisper
 //! ```
 //!
 //! An items file is a benchmark (`sanjeh::bench`); `measure` also takes
@@ -196,6 +197,64 @@ fn run(args: &[String]) -> Result<(), String> {
             show("mouth", &measured.mouth);
             return Ok(());
         }
+        Some("line") if args.get(1).map(String::as_str) == Some("hear") => {
+            #[cfg(not(feature = "hear"))]
+            return Err("The 'hear' feature is not enabled. Recompile with --features hear".into());
+
+            #[cfg(feature = "hear")]
+            {
+                let model_path = option(args, "--model").unwrap_or("models/ggml-tiny.en.bin");
+
+                let mut clips = vec![];
+                let mut iter = args.iter().skip(2);
+                while let Some(arg) = iter.next() {
+                    if arg == "--model" {
+                        iter.next();
+                    } else if !arg.starts_with("--") {
+                        clips.push(arg);
+                    }
+                }
+
+                if clips.is_empty() {
+                    return Err("usage: sanjeh line hear <clips.wav...> [--model <file>]".into());
+                }
+
+                eprintln!("Loading Whisper model from: {}", model_path);
+                let model = sanjeh::hear::WhisperModel::load(model_path)?;
+
+                let mut has_error = false;
+                for clip_path in clips {
+                    eprintln!("\nProcessing clip: {}", clip_path);
+
+                    let samples = match sanjeh::hear::read_audio_for_whisper(clip_path) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error reading {}: {}", clip_path, e);
+                            has_error = true;
+                            continue;
+                        }
+                    };
+
+                    match model.transcribe(&samples) {
+                        Ok(words) => {
+                            println!("Heard {} words:", words.len());
+                            for w in words {
+                                println!("- {} (p: {:.2})", w.word, w.p.unwrap_or(0.0));
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error running whisper on {}: {}", clip_path, e);
+                            has_error = true;
+                        }
+                    }
+                }
+
+                if has_error {
+                    return Err("some audio clips failed to process".into());
+                }
+                return Ok(());
+            }
+        }
         Some("alike") => {
             let word = text_of(args);
             let level = match option(args, "--level") {
@@ -259,7 +318,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         _ => {}
     }
-    let usage = "usage: sanjeh (pronounce | melts | level | alike) …, or sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all]";
+    let usage = "usage: sanjeh (pronounce | melts | level | alike) …, or sanjeh line (features|measure|bench) <file.jsonl | -> [--model <file>] [--split fit|test|all], or sanjeh line hear <clips.wav...> [--model <file>]";
     let (Some("line"), Some(command), Some(path)) = (
         args.first().map(String::as_str),
         args.get(1).map(String::as_str),
