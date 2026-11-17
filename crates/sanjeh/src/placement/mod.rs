@@ -5,11 +5,36 @@
 //! Everything here is a pure function of its inputs: no data is needed, and
 //! the only randomness is a seed the caller gives, so a test can be run again
 //! and give the same questions.
+//!
+//! The made-up word generator for the vocabulary yes/no part lives in its
+//! own file (`made_up`) and is re-exported here, so the engine and the
+//! generator share one `Seed` (one SplitMix64 step) and one `placement`
+//! path.
 
 use serde::{Deserialize, Serialize};
 
 use crate::levels::Level;
 use crate::line::Skill;
+
+pub mod made_up;
+pub use made_up::made_up_words;
+
+/// SplitMix64: a deterministic step from one `u64` to the next, so the same
+/// seed gives the same series and no run ever depends on hidden randomness.
+/// Shared by the engine's `pseudo_random_index` and the made-up word
+/// generator's `Seed`, so there is one copy of the mixing constants.
+pub(super) struct Seed(pub(super) u64);
+
+impl Seed {
+    /// The next number, always the same for the same seed.
+    pub(super) fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+}
 
 /// One part of the test.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -231,15 +256,15 @@ pub fn estimate(answers: &[Answer], bank: &Bank, prior: Prior) -> Result<Estimat
     })
 }
 
-/// Simple deterministic hash to pick an index with caller's seed (no hidden randomness).
+/// Simple deterministic hash to pick an index with caller's seed (no hidden
+/// randomness). One SplitMix64 step through the shared `Seed`, so the engine
+/// and the made-up word generator keep one copy of the mixing.
 fn pseudo_random_index(seed: u64, count: usize) -> usize {
     if count == 0 {
         return 0;
     }
-    let mut z = seed.wrapping_add(0x9e3779b97f4a7c15);
-    z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
-    ((z ^ (z >> 31)) as usize) % count
+    let mut seed = Seed(seed);
+    (seed.next() as usize) % count
 }
 
 /// How many of the most informative items `next_item` draws from. The design
